@@ -6,11 +6,12 @@ import base64
 import numpy as np
 import cv2
 import os
+import sys
 
 # -----------------------------
 # Config
 # -----------------------------
-BOT = "entebot208"
+BOT = sys.argv[1] if len(sys.argv) > 1 else "entebot208"
 WS_URL = f"ws://{BOT}.local:9001/ros_api"
 CAMERA_TOPIC = f"/{BOT}/camera_node/image/compressed"
 CAPTURE_DIR = os.path.expanduser("~/duckietown/calibration")
