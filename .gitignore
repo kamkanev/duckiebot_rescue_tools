@@ -9,6 +9,7 @@ venv/
 env/
 ENV/
 env.bak/
+duckiebot-env/
 
 # Distribution / packaging
 build/
