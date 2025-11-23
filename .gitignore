@@ -1,0 +1,85 @@
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+.pytest_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Editor directories and files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs and databases
+*.log
+*.sqlite3
+*.db
+
+# Jupyter
+.ipynb_checkpoints
+
+# Mypy
+.mypy_cache/
+
+# Misc
+.cache/
+.ropeproject/
+*.egg
+*.whl
+
+# Local config / environment files
+.env
+.env.*
+local_settings.py
+
+# Node
+node_modules/
+
+# Duckietown / ROS specific
+*.bag
+*.bag.*
+*.bag.active
+.ros/
+catkin_ws/
+devel/
+build/
+install/
+rosparam_dump.*
+_logs/
+log/
+
+# Protobuf / generated code
+*.pb.cc
+*.pb.h
+
+# JetBrains
+*.iml

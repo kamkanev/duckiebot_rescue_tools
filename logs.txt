@@ -1,0 +1,34 @@
+[INFO] [1763855607.841562]: [/entebot208/ground_projection_node] Health status changed [WARNING] -> [WARNING]
+[INFO] [1763855607.850736]: [/entebot208/ground_projection_node] Health status changed [WARNING] -> [ERROR]
+[ERROR] [1763855607.868866]: [/entebot208/ground_projection_node] Found no calibration file ... aborting
+[WARN] [1763855607.878092]: [/entebot208/ground_projection_node] Waiting for a CameraInfo message
+[INFO] [1763855607.890878]: [/entebot208/ground_projection_node] Received shutdown request.
+[INFO] [1763855607.901505]: [/entebot208/ground_projection_node] Health status changed [WARNING] -> [WARNING]
+[WARN] [1763855607.914563]: [/entebot208/ground_projection_node] Waiting for a CameraInfo message
+[INFO] [1763855607.937437]: [/entebot208/ground_projection_node] Health status changed [WARNING] -> [WARNING]
+[WARN] [1763855608.011538]: [/entebot208/ground_projection_node] Waiting for a CameraInfo message
+[entebot208/ground_projection_node-3] process has finished cleanly
+log file: /tmp/log/5e30dce4-c7f5-11f0-94b4-001325aeb410/entebot208-ground_projection_node-3*.log
+[INFO] [1763855611.641123]: [/entebot208/anti_instagram_node] Waiting for first image!
+[INFO] [1763855616.640969]: [/entebot208/anti_instagram_node] Waiting for first image!
+[WARN] [1763855617.585588]: timeout exceeded while waiting for service /entebot208/lane_filter_node/switch
+[INFO] [1763855617.599088]: FSM waiting for service ground_projection_node/switch
+[INFO] [1763855619.844567]: [/entebot208/lane_filter_node] Initializing...
+[INFO] [1763855620.003588]: [/entebot208/lane_filter_node] Node starting with switch=False
+[INFO] [1763855620.016884]: [/entebot208/lane_filter_node] Found 0 user configuration files in '/data/config/ros/nodes/generic'
+[INFO] [1763855620.023857]: [/entebot208/lane_filter_node] Found 0 user configuration files in '/data/config/ros/nodes/lane_filter_node'
+[INFO] [1763855620.060430]: [/entebot208/lane_filter_node] Health status changed [STARTING] -> [STARTED]
+[INFO] [1763855621.642383]: [/entebot208/anti_instagram_node] Waiting for first image!
+[INFO] [1763855626.640991]: [/entebot208/anti_instagram_node] Waiting for first image!
+[WARN] [1763855627.707331]: timeout exceeded while waiting for service /entebot208/ground_projection_node/switch
+[INFO] [1763855627.713764]: FSM waiting for service lane_controller_node/switch
+[INFO] [1763855627.745158]: FSM found service lane_controller_node/switch
+[INFO] [1763855627.779038]: FSM waiting for service led_emitter_node/switch
+[INFO] [1763855627.804286]: FSM found service led_emitter_node/switch
+[INFO] [1763855627.840645]: [/entebot208/fsm_node] Initialized.
+[INFO] [1763855627.874880]: [/entebot208/anti_instagram_node] Node switched from [off] to [on]
+[INFO] [1763855627.907375]: [/entebot208/line_detector_node] Node switched from [on] to [on]
+[INFO] [1763855628.002103]: [/entebot208/lane_controller_node] Node switched from [on] to [off]
+[INFO] [1763855628.032745]: [/entebot208/led_emitter_node] Node switched from [off] to [on]
+[INFO] [1763855628.052194]: [/entebot208/fsm_node] FSMState: NORMAL_JOYSTICK_CONTROL
+[INFO] [1763855628.079788]: [/entebot208/led_emitter_node] Pattern changed to ('GREEN'), cycle: 0 

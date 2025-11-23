@@ -1,0 +1,13 @@
+ssh duckie@entebot208.local
+
+docker run -it --rm --privileged --net=host --name dt-core duckietown/dt-core:ente-arm64v8 bash
+
+roslaunch duckietown_demos lane_following.launch veh:=entebot208
+
+
+docker exec -it ros-interface bash
+
+docker exec -it code-api bash
+
+
+rostopic list
