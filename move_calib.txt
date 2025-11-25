@@ -1,0 +1,4 @@
+left gain 1.13
+right gain 0.89
+left trim -0.03
+right trim 0.02

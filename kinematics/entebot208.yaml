@@ -1,0 +1,16 @@
+# Duckiebot kinematics calibration
+version: 1
+
+gain:
+  left: 1.13
+  right: 0.89
+
+trim:
+  left: -0.03
+  right: 0.02
+
+baseline: 0.1          # KEEP DEFAULT unless you measured it
+radius: 0.0318         # Standard DB21J wheel radius
+motor_constant: 0.27   # Default motor constant
+motor_offset: 0.0      # Usually stays 0
+
