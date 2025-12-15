@@ -1,38 +1,28 @@
-[INFO] [1764096474.483691]: FSM waiting for service line_detector_node/switch
-[INFO] [1764096474.488532]: [/entebot208/anti_instagram_node] Initialized.
-[INFO] [1764096475.636709]: [/entebot208/line_detector_node] Initializing...
-[INFO] [1764096475.771827]: [/entebot208/line_detector_node] Node starting with switch=True
-[INFO] [1764096475.785346]: [/entebot208/line_detector_node] Found 0 user configuration files in '/data/config/ros/nodes/generic'
-[INFO] [1764096475.796086]: [/entebot208/line_detector_node] Found 0 user configuration files in '/data/config/ros/nodes/line_detector_node'
-[INFO] [1764096475.835432]: [/entebot208/line_detector_node] Health status changed [STARTING] -> [STARTED]
-[INFO] [1764096475.964736]: [/entebot208/line_detector_node] Color range changed to {"RED": {"low_1": [0, 140, 100], "high_1": [15, 255, 255], "low_2": [165, 140, 100], "high_2": [180, 255, 255]}, "WHITE": {"low": [0, 0, 150], "high": [180, 100, 255]}, "YELLOW": {"low": [25, 140, 100], "high": [45, 255, 255]}}
-[INFO] [1764096476.073869]: FSM found service line_detector_node/switch
-[INFO] [1764096476.109832]: FSM waiting for service lane_filter_node/switch
-[INFO] [1764096476.160105]: [/entebot208/line_detector_node] Using the CPU for line detection.
-[INFO] [1764096479.427933]: [/entebot208/anti_instagram_node] Waiting for first image!
-[INFO] [1764096484.431863]: [/entebot208/anti_instagram_node] Waiting for first image!
-[WARN] [1764096486.199376]: timeout exceeded while waiting for service /entebot208/lane_filter_node/switch
-[INFO] [1764096486.206944]: FSM waiting for service ground_projection_node/switch
-[INFO] [1764096486.239943]: FSM found service ground_projection_node/switch
-[INFO] [1764096486.255934]: FSM waiting for service lane_controller_node/switch
-[INFO] [1764096486.290882]: FSM found service lane_controller_node/switch
-[INFO] [1764096486.310797]: FSM waiting for service led_emitter_node/switch
-[INFO] [1764096486.425854]: FSM found service led_emitter_node/switch
-[INFO] [1764096486.503439]: [/entebot208/fsm_node] Initialized.
-[INFO] [1764096486.576478]: [/entebot208/anti_instagram_node] Node switched from [off] to [on]
-[INFO] [1764096486.607156]: [/entebot208/line_detector_node] Node switched from [on] to [on]
-[INFO] [1764096486.625345]: [/entebot208/ground_projection_node] Node switched from [on] to [on]
-[INFO] [1764096486.715734]: [/entebot208/lane_controller_node] Node switched from [on] to [off]
-[INFO] [1764096486.743011]: [/entebot208/led_emitter_node] Node switched from [off] to [on]
-[INFO] [1764096486.754015]: [/entebot208/fsm_node] FSMState: NORMAL_JOYSTICK_CONTROL
-[INFO] [1764096486.776644]: [/entebot208/led_emitter_node] Pattern changed to ('GREEN'), cycle: 0 
-[INFO] [1764096489.428080]: [/entebot208/anti_instagram_node] Waiting for first image!
-[INFO] [1764096494.427913]: [/entebot208/anti_instagram_node] Waiting for first image!
-[INFO] [1764096494.883001]: [/entebot208/lane_filter_node] Initializing...
-[INFO] [1764096495.055661]: [/entebot208/lane_filter_node] Node starting with switch=False
-[INFO] [1764096495.068709]: [/entebot208/lane_filter_node] Found 0 user configuration files in '/data/config/ros/nodes/generic'
-[INFO] [1764096495.077904]: [/entebot208/lane_filter_node] Found 0 user configuration files in '/data/config/ros/nodes/lane_filter_node'
-[INFO] [1764096495.106827]: [/entebot208/lane_filter_node] Health status changed [STARTING] -> [STARTED]
+[INFO] [1764524323.721169]: [/entebot208/line_detector_node] Using the CPU for line detection.
+[INFO] [1764524327.735211]: [/entebot208/anti_instagram_node] Waiting for first image!
+[INFO] [1764524332.742429]: [/entebot208/anti_instagram_node] Waiting for first image!
+[WARN] [1764524333.315255]: timeout exceeded while waiting for service /entebot208/lane_filter_node/switch
+[INFO] [1764524333.335637]: FSM waiting for service ground_projection_node/switch
+[INFO] [1764524333.361509]: FSM found service ground_projection_node/switch
+[INFO] [1764524333.369040]: FSM waiting for service lane_controller_node/switch
+[INFO] [1764524333.384763]: FSM found service lane_controller_node/switch
+[INFO] [1764524333.393977]: FSM waiting for service led_emitter_node/switch
+[INFO] [1764524333.483023]: FSM found service led_emitter_node/switch
+[INFO] [1764524333.576603]: [/entebot208/fsm_node] Initialized.
+[INFO] [1764524333.664598]: [/entebot208/anti_instagram_node] Node switched from [off] to [on]
+[INFO] [1764524333.767503]: [/entebot208/line_detector_node] Node switched from [on] to [on]
+[INFO] [1764524333.910726]: [/entebot208/ground_projection_node] Node switched from [on] to [on]
+[INFO] [1764524334.346193]: [/entebot208/lane_controller_node] Node switched from [on] to [off]
+[INFO] [1764524334.446259]: [/entebot208/led_emitter_node] Node switched from [off] to [on]
+[INFO] [1764524334.480729]: [/entebot208/fsm_node] FSMState: NORMAL_JOYSTICK_CONTROL
+[INFO] [1764524334.604262]: [/entebot208/led_emitter_node] Pattern changed to ('GREEN'), cycle: 0 
+[INFO] [1764524337.742075]: [/entebot208/anti_instagram_node] Waiting for first image!
+[INFO] [1764524342.741699]: [/entebot208/anti_instagram_node] Waiting for first image!
+[INFO] [1764524347.210958]: [/entebot208/lane_filter_node] Initializing...
+[INFO] [1764524347.473654]: [/entebot208/lane_filter_node] Node starting with switch=False
+[INFO] [1764524347.488834]: [/entebot208/lane_filter_node] Found 0 user configuration files in '/data/config/ros/nodes/generic'
+[INFO] [1764524347.499735]: [/entebot208/lane_filter_node] Found 0 user configuration files in '/data/config/ros/nodes/lane_filter_node'
+[INFO] [1764524347.531014]: [/entebot208/lane_filter_node] Health status changed [STARTING] -> [STARTED]
 Traceback (most recent call last):
   File "/code/src/dt-core/packages/lane_filter/src/lane_filter_node.py", line 75, in __init__
     self._filter['wheel_baseline'] = rospy.get_param("kinematics_node/baseline")
@@ -50,34 +40,35 @@ Traceback (most recent call last):
   File "/code/src/dt-core/packages/lane_filter/src/lane_filter_node.py", line 77, in __init__
     except rospy.KeyError as e:
 AttributeError: module 'rospy' has no attribute 'KeyError'
-[INFO] [1764096495.192442]: [/entebot208/lane_filter_node] Received shutdown request.
+[INFO] [1764524347.735198]: [/entebot208/anti_instagram_node] Waiting for first image!
+[INFO] [1764524347.769195]: [/entebot208/lane_filter_node] Received shutdown request.
 ================================================================================REQUIRED process [entebot208/lane_filter_node-6] has died!
-process has died [pid 105, exit code 1, cmd /code/src/dt-core/packages/lane_filter/src/lane_filter_node.py lane_filter_node/segment_list:=ground_projection_node/lineseglist_out lane_filter_node/car_cmd:=car_cmd_switch_node/cmd lane_filter_node/fsm_mode:=fsm_node/mode lane_filter_node/left_wheel_encoder_driver_node/tick:=left_wheel_encoder_driver_node/tick lane_filter_node/right_wheel_encoder_driver_node/tick:=right_wheel_encoder_driver_node/tick __name:=lane_filter_node __log:=/tmp/log/cef0f230-ca2e-11f0-9c6d-024293fe1e6a/entebot208-lane_filter_node-6.log].
-log file: /tmp/log/cef0f230-ca2e-11f0-9c6d-024293fe1e6a/entebot208-lane_filter_node-6*.log
+process has died [pid 105, exit code 1, cmd /code/src/dt-core/packages/lane_filter/src/lane_filter_node.py lane_filter_node/segment_list:=ground_projection_node/lineseglist_out lane_filter_node/car_cmd:=car_cmd_switch_node/cmd lane_filter_node/fsm_mode:=fsm_node/mode lane_filter_node/left_wheel_encoder_driver_node/tick:=left_wheel_encoder_driver_node/tick lane_filter_node/right_wheel_encoder_driver_node/tick:=right_wheel_encoder_driver_node/tick __name:=lane_filter_node __log:=/tmp/log/492eb270-ce13-11f0-be56-001325aeb410/entebot208-lane_filter_node-6.log].
+log file: /tmp/log/492eb270-ce13-11f0-be56-001325aeb410/entebot208-lane_filter_node-6*.log
 Initiating shutdown!
 ================================================================================
 [entebot208/anti_instagram_node-10] killing on exit
 [entebot208/led_emitter_node-9] killing on exit
-[INFO] [1764096497.604112]: [/entebot208/anti_instagram_node] Received shutdown request.
-[INFO] [1764096497.605073]: [/entebot208/led_emitter_node] Received shutdown request.
-[INFO] [1764096497.632717]: [/entebot208/led_emitter_node] Shutting down. Turning LEDs off.
-[entebot208/lane_controller_node-7] killing on exit
-[INFO] [1764096497.636652]: [/entebot208/lane_controller_node] Received shutdown request.
-[entebot208/lane_filter_node-6] killing on exit
-[INFO] [1764096497.663078]: [/entebot208/led_emitter_node] Pattern changed to ('LIGHT_OFF'), cycle: 0 
-[entebot208/lane_pose_visualizer_node-8] killing on exit[entebot208_to_map-5] killing on exit
-[entebot208/line_segment_visualizer_node-4] killing on exit
-[INFO] [1764096497.692351]: [/entebot208/line_segment_visualizer_node] Received shutdown request.
+[INFO] [1764524351.889990]: [/entebot208/anti_instagram_node] Received shutdown request.
+[INFO] [1764524351.893865]: [/entebot208/led_emitter_node] Received shutdown request.
+[entebot208/lane_pose_visualizer_node-8] killing on exit
+[entebot208/lane_controller_node-7] killing on exit[entebot208/lane_filter_node-6] killing on exit
+[entebot208_to_map-5] killing on exit
+
+[entebot208/line_segment_visualizer_node-4] killing on exit[INFO] [1764524351.926362]: [/entebot208/lane_pose_visualizer_node] Received shutdown request.
 [entebot208/ground_projection_node-3] killing on exit
 
-[INFO] [1764096497.750114]: [/entebot208/ground_projection_node] Received shutdown request.
-[INFO] [1764096497.787112]: [/entebot208/lane_pose_visualizer_node] Received shutdown request.
 [entebot208/line_detector_node-2] killing on exit
-[INFO] [1764096497.801728]: [/entebot208/line_detector_node] Received shutdown request.
+[INFO] [1764524351.944217]: [/entebot208/led_emitter_node] Shutting down. Turning LEDs off.
 [entebot208/fsm_node-1] killing on exit
-[INFO] [1764096497.807241]: [/entebot208/fsm_node] Shutting down.
-[INFO] [1764096497.828214]: [/entebot208/lane_pose_visualizer_node] Shutting down.
-[INFO] [1764096497.864042]: [/entebot208/lane_pose_visualizer_node] Shutting down.
+[INFO] [1764524351.970432]: [/entebot208/line_segment_visualizer_node] Received shutdown request.
+[INFO] [1764524351.978746]: [/entebot208/line_detector_node] Received shutdown request.
+[INFO] [1764524351.952145]: [/entebot208/lane_pose_visualizer_node] Shutting down.
+[INFO] [1764524351.973048]: [/entebot208/led_emitter_node] Pattern changed to ('LIGHT_OFF'), cycle: 0 
+[INFO] [1764524351.973263]: [/entebot208/ground_projection_node] Received shutdown request.
+[INFO] [1764524351.973715]: [/entebot208/lane_controller_node] Received shutdown request.
+[INFO] [1764524351.971867]: [/entebot208/fsm_node] Shutting down.
+[INFO] [1764524352.032347]: [/entebot208/lane_pose_visualizer_node] Shutting down.
 shutting down processing monitor...
 ... shutting down processing monitor complete
 done

@@ -119,12 +119,13 @@ async def teleop():
                     if event.key == pygame.K_f:
                         lane_following = not lane_following
                         print("Lane following =", lane_following)
-                        await switch_lane_follow(ws, lane_following)
+                        #await switch_lane_follow(ws, lane_following)
+                        
 
             # Decide which commands to send
             if lane_following:
-                v = latest_lane_cmd["v"]
-                omega = latest_lane_cmd["omega"]
+                v = SPEED
+                omega = 0.0
             else:
                 keys = pygame.key.get_pressed()
                 v, omega = 0.0, 0.0
