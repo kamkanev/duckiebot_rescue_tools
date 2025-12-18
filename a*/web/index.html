@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body, canvas {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+    </head>
+<body onload="init()">
+    <canvas id="canvas-id"/>
+    <!-- Constanst used in all classes -->
+    <script src="./classes/helpers/consts.js" charset="utf-8"></script>
+    <!-- Initialize the game engine and the canvas -->
+    <script src="initializer.js"></script>
+    <!-- Helpers -->
+    <script src="./classes/helpers/Point.js" charset="utf-8"></script>
+    <script src="./classes/helpers/functions.js" charset="utf-8"></script>
+    <script src="./classes/helpers/Perlin_Noise.js" charset="utf-8"></script>
+    <!-- Path finding -->
+    <script src="./classes/pathfinding/Spot.js" charset="utf-8"></script>
+    <script src="./classes/pathfinding/AStar.js" charset="utf-8"></script>
+    <!-- Classes -->
+      <!-- Terrain -->
+    <script src="./classes/terrain/Tile.js" charset="utf-8"></script>
+    <script src="./classes/terrain/Terrain.js" charset="utf-8"></script>
+    <!-- Creatures -->
+    <script src="./classes/creatures/Rabbit.js" charset="utf-8"></script>
+    <!-- Main game loop -->
+    <script src="game.js"></script>
+
+</body>
+</html>

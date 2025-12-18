@@ -73,11 +73,13 @@ class RRTGraph:
         self.goalState = None
         self.path = []
 
-    def addNode(self, node):
-        pass
+    def addNode(self, n, x, y):
+        self.x.append(n, x)
+        self.y.append(n, y)
+        
 
-    def addEdge(self, node1, node2):
-        pass
+    def addEdge(self, parent, child):
+        self.parent.append(child, parent)
 
     def makeRandomRect(self):
         x = int(random.uniform(0, self.mapw - self.obsticles_dimensions))
@@ -101,23 +103,32 @@ class RRTGraph:
         self.obsticles = obs.copy()
         return obs
 
-    def removeNode(self, node):
-        pass
+    def removeNode(self, n):
+        self.x.pop(n)
+        self.y.pop(n)
 
-    def removeEdge(self, node1, node2):
-        pass
+    def removeEdge(self, n):
+        self.parent.pop(n)
 
     def numberOfNodes(self):
-        pass
+        return len(self.x)
 
     def distance(self, node1, node2):
-        pass
+        (x1, y1) = (self.x[node1], self.y[node1])
+        (x2, y2) = (self.x[node2], self.y[node2])
+        return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+    
+    def sample_env(self):
+        x = int(random.uniform(0, self.mapw))
+        y = int(random.uniform(0, self.maph))
+        return (x, y)
 
     def nearest(self, node):
         pass
 
     def isFree(self):
         pass
+        
 
     def crossObstacle(self):
         pass
