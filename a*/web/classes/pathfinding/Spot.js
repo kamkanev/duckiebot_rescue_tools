@@ -16,6 +16,11 @@ class Spot extends Point{
 
   }
 
+  /**
+   * Adds neighbors to the current spot.
+   * @param {Array} grid a grid with all elements
+   * @param {Boolean} withDiagonals to include or exclude the diaogonal neighbors
+   */
   addNeighbors(grid, withDiagonals = false){
 
     var i = this.x
@@ -42,21 +47,25 @@ class Spot extends Point{
 
   }
 
+  addNeighbor(spot){
+    this.neighbors.push(spot);
+  }
+
   show(color, size = 30, showG = false){
 
     context.fillStyle = color;
-    context.fillRect(this.x * size, this.y * size, size - 1, size - 1);
+    context.fillRect(this.x, this.y, size, size);
 
     if(!showG){
       //draw the coords
       context.fillStyle = "black";
       context.font = "9px Arial";
-      context.fillText(`${this.x},${this.y}`, this.x * size + size/4, this.y * size + size/2);
+      context.fillText(`${this.x},${this.y}`, this.x + size/4, this.y + size/2);
     }else{
       //draw the coords
       context.fillStyle = "black";
       context.font = "10px Arial";
-      context.fillText(`${this.g}`, this.x * size + size/2, this.y * size + size/2);
+      context.fillText(`${this.g}`, this.x + size/2, this.y + size/2);
     }
 
   }

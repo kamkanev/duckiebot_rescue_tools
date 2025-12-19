@@ -1,33 +1,24 @@
-class AStar {
-  constructor(terrain, start, end, includeDiagonals = false) {
+class AStarGraph {
+  constructor(start, end) {
 
-    this.zoom = terrain.zoom;
+    this.__init(start, end);
+  }
 
-    this.grid = this.__generateGrid(terrain.map, includeDiagonals);
+  restart(startPoint, endPoint){
 
-    this.__init(start, end, includeDiagonals);
+    this.__init(startPoint, endPoint);
 
   }
 
-  restart(startPoint, endPoint, includeDiagonals = false, zoom = 30){
+  __init(startPoint, endPoint){
 
-    this.zoom = zoom;
+    this.start = startPoint;
+    this.end = endPoint;
 
-    this.grid = this.__regenerateGrid(includeDiagonals);
-
-    this.__init(startPoint, endPoint, includeDiagonals);
-
-  }
-
-  __init(startPoint, endPoint, includeDiagonals = false){
-
-    this.withDiagonals = includeDiagonals;
-
-    this.start = this.grid[startPoint.x][startPoint.y];
-    this.end = this.grid[endPoint.x][endPoint.y];
-
+    //maybe remove walls from start and end
     this.start.isWall = false;
     this.end.isWall = false;
+    //
 
     this.isDone = false;
     this.noSolution = false;
@@ -37,48 +28,6 @@ class AStar {
     this.closeSet = [];
 
     this.path = [];
-
-  }
-
-  __regenerateGrid(withDiagonals = false){
-
-    var grid = [];
-
-    for (var i = 0; i < this.grid.length; i++) {
-      grid[i] = [];
-      for (var j = 0; j < this.grid[i].length; j++) {
-        grid[i][j] = new Spot(i, j, this.grid[i][j].isWall);
-      }
-    }
-
-    for (var i = 0; i < this.grid.length; i++) {
-      for (var j = 0; j < this.grid[i].length; j++) {
-        grid[i][j].addNeighbors(grid, withDiagonals);
-      }
-    }
-
-    return grid;
-
-  }
-
-  __generateGrid(map, includeDiagonals = false){
-
-    var grid = [];
-
-    for (var i = 0; i < map.length; i++) {
-      grid[i] = [];
-      for (var j = 0; j < map[i].length; j++) {
-        grid[i][j] = new Spot(i, j, map[i][j].isOccupie);
-      }
-    }
-
-    for (var i = 0; i < map.length; i++) {
-      for (var j = 0; j < map[i].length; j++) {
-        grid[i][j].addNeighbors(grid, includeDiagonals);
-      }
-    }
-
-    return grid;
 
   }
 
@@ -174,29 +123,19 @@ class AStar {
   draw(showG = false){
 
     for (var i = 0; i < this.path.length; i++) {
-      this.path[i].show("#00bbff", this.zoom, showG);
+      this.path[i].show("#00bbff", 30, showG);
     }
 
   }
 
   debugDraw(showG = false){
 
-    for (var i = 0; i < Math.round(this.grid.length/this.zoom); i++) {
-      for (var j = 0; j < Math.round(this.grid[i].length/this.zoom); j++) {
-        if(!this.grid[i][j].isWall){
-          this.grid[i][j].show("#d6d6d6", this.zoom, showG);
-        }else{
-          this.grid[i][j].show("#fff000", this.zoom, showG);
-        }
-      }
-    }
-
     for (var i = 0; i < this.openSet.length; i++) {
-      this.openSet[i].show("#00ff00", this.zoom, showG);
+      this.openSet[i].show("#00ff00", 30, showG);
     }
 
     for (var i = 0; i < this.closeSet.length; i++) {
-      this.closeSet[i].show("#ff0000", this.zoom, showG);
+      this.closeSet[i].show("#ff0000", 30, showG);
     }
 
     this.draw(showG);
