@@ -13,8 +13,8 @@ if(endlessCanvas){
 }
 else
 {
-    canvas.width = 800;
-    canvas.height = 600;
+    canvas.width = 1000;
+    canvas.height = 700;
 }
 var context = canvas.getContext("2d");
 context.fillStyle = "#0000ff";

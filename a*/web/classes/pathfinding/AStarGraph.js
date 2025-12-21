@@ -36,7 +36,7 @@ class AStarGraph {
     var hip = distance(a, b);
     var manhatanDis = Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 
-    return this.withDiagonals == true ? hip : manhatanDis;
+    return hip; //this.withDiagonals == true ? hip : manhatanDis;
   }
 
   update(){
@@ -110,7 +110,12 @@ class AStarGraph {
         this.path = [];
         var t = curr;
         this.path.push(t);
-        while(t.previous){
+        while(t.previous){ //TODO fix problem when unidirectional edges are used
+          // console.warn("tracing back");
+          // console.log("T:", t);
+          // console.log("Previous:", t.previous);
+          // console.log(this.path);
+          
           this.path.push(t.previous);
           t = t.previous;
         }

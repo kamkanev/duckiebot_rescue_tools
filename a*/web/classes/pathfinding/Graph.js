@@ -21,7 +21,11 @@ class Graph {
                 if(spotA.x !== spotB.x && spotA.y !== spotB.y) {
                     const dist = Math.sqrt((spotA.x - spotB.x) ** 2 + (spotA.y - spotB.y) ** 2);
                     if(dist < 200) { // arbitrary connection distance
-                        this.addEdge(spotA, spotB);
+                        if(Math.random() < 0.5) { // random chance to connect
+                            this.addEdge(spotA, spotB);
+                        }else{
+                            this.addEdge(spotA, spotB, false);
+                        }
                     }
                 }
             }
@@ -43,8 +47,28 @@ class Graph {
         }
     }
 
+    removeSpot(spot) {
+        this.spots = this.spots.filter(s => s.x !== spot.x || s.y !== spot.y);
+        for(const s of this.spots) {
+            s.neighbors = s.neighbors.filter(n => n.x !== spot.x || n.y !== spot.y);
+        }
+    }
+
+    removeEdge(spotA, spotB, bidirectional = true) {
+        spotA.neighbors = spotA.neighbors.filter(n => n.x !== spotB.x || n.y !== spotB.y);
+        if(bidirectional) {
+            spotB.neighbors = spotB.neighbors.filter(n => n.x !== spotA.x || n.y !== spotA.y);
+        }
+    }
+
     getEdges(spot) {
         return spot.neighbors;
+    }
+
+    clearSpots() {
+        for(const spot of this.spots) {
+            spot.clear();
+        }
     }
 
     getNearestSpot(x, y) {
@@ -62,20 +86,38 @@ class Graph {
         return nearestSpot;
     }
 
+    getNearestSpotWithin(x, y, maxDistance) {
+        let nearestSpot = null;
+        let minDist = Infinity;
+
+        for(const spot of this.spots) {
+            const dist = Math.sqrt((spot.x - x) ** 2 + (spot.y - y) ** 2);
+            if(dist < minDist && dist <= maxDistance) {
+                minDist = dist;
+                nearestSpot = spot;
+            }
+        }
+
+        return nearestSpot;
+    }
+
     draw() {
         for(const spot of this.spots) {
+            for(const neighbor of spot.neighbors) {
+                context.beginPath();
+                context.moveTo(spot.x, spot.y);
+                context.lineTo(neighbor.x, neighbor.y);
+                context.strokeStyle = "#000000";
+                // canvas_arrow(context, spot.x, spot.y, neighbor.x, neighbor.y);
+                context.stroke();
+            }
+
             if(spot.isWall) {
                 spot.show("black");
             } else {
                 spot.show("#c01010ff");
             }
-            for(const neighbor of spot.neighbors) {
-                context.beginPath();
-                context.moveTo(spot.x + 15, spot.y + 15);
-                context.lineTo(neighbor.x + 15, neighbor.y + 15);
-                context.strokeStyle = "#000000";
-                context.stroke();
-            }
+            
         }
     }
 

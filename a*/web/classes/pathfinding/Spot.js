@@ -16,6 +16,14 @@ class Spot extends Point{
 
   }
 
+  clear(){
+    this.f = 0; // over all cost g + h
+    this.g = 0; // cost to this spot
+    this.h = 0; // heuristics
+
+    this.previous = undefined;
+  }
+
   /**
    * Adds neighbors to the current spot.
    * @param {Array} grid a grid with all elements
@@ -54,7 +62,14 @@ class Spot extends Point{
   show(color, size = 30, showG = false){
 
     context.fillStyle = color;
-    context.fillRect(this.x, this.y, size, size);
+    if(this.isWall){
+      context.fillStyle = "black";
+    }
+    context.beginPath();
+    context.arc(this.x, this.y, size/2, 0, 2 * Math.PI);
+    context.fill();
+    context.closePath();
+    // context.fillRect(this.x, this.y, size, size);
 
     if(!showG){
       //draw the coords
@@ -65,7 +80,7 @@ class Spot extends Point{
       //draw the coords
       context.fillStyle = "black";
       context.font = "10px Arial";
-      context.fillText(`${this.g}`, this.x + size/2, this.y + size/2);
+      context.fillText(`${this.g}`, this.x, this.y);
     }
 
   }
