@@ -105,10 +105,10 @@ class Graph {
         for(const spot of this.spots) {
             for(const neighbor of spot.neighbors) {
                 context.beginPath();
-                context.moveTo(spot.x, spot.y);
-                context.lineTo(neighbor.x, neighbor.y);
-                context.strokeStyle = "#000000";
-                // canvas_arrow(context, spot.x, spot.y, neighbor.x, neighbor.y);
+                // context.moveTo(spot.x, spot.y);
+                // context.lineTo(neighbor.x, neighbor.y);
+                context.strokeStyle = "#4260e4ff";
+                canvas_arrow(context, spot.x, spot.y, neighbor.x, neighbor.y);
                 context.stroke();
             }
 

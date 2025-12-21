@@ -13,7 +13,7 @@ var isFirstRun = true;
 var buildMode = false;
 var editSpot = true;
 var removingElements = false;
-var bidirectionalEdges = false;
+var bidirectionalEdges = true;
 
 
 var map = new Image();
@@ -128,7 +128,7 @@ function draw() {
             context.fillText(`Click on a node and another to add an edge`, 120, canvas.height - 30);
         }
 
-        if(bidirectionalEdges){
+        if(!bidirectionalEdges){
             context.beginPath();
             context.lineWidth = 2;
             context.strokeStyle = "black";
@@ -272,7 +272,7 @@ function mouseup() {
                 if(nearestSpot == null){
                     console.log("No spot nearby to connect to.");
                 }else{
-                    g.addEdge(startSpot, nearestSpot); //TODO: bidirectional option
+                    g.addEdge(startSpot, nearestSpot, bidirectionalEdges); //TODO: bidirectional option
                     console.log("Connected", startSpot, "to", nearestSpot);
                     isFirstRun = true;
                 }
