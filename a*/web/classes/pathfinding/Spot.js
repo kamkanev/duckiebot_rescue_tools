@@ -59,7 +59,7 @@ class Spot extends Point{
     this.neighbors.push(spot);
   }
 
-  show(color, size = 30, showG = false){
+  show(color, size = 12, showG = false){
 
     context.fillStyle = color;
     if(this.isWall){

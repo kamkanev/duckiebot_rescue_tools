@@ -16,6 +16,9 @@ var removingElements = false;
 var bidirectionalEdges = false;
 
 
+var map = new Image();
+map.src = 'map.jpg';
+
 var cursor = new Point();
 
 function update() {
@@ -35,6 +38,8 @@ function draw() {
     //  t.draw();
 
     // r.draw(true);
+
+    context.drawImage(map, -260, -50, 1700, 650);
 
     context.strokeStyle = "black";
     context.lineWidth = 1;
@@ -241,7 +246,7 @@ function mouseup() {
         }
     }else{
         if(editSpot){
-            var nearestSpot = g.getNearestSpotWithin(Math.floor(mouseX), Math.floor(mouseY), 30);
+            var nearestSpot = g.getNearestSpotWithin(Math.floor(mouseX), Math.floor(mouseY), 15);
             if(nearestSpot == null){
                 g.addSpot(new Spot(Math.floor(mouseX), Math.floor(mouseY)));
                 console.log("Added new spot at:", Math.floor(mouseX), Math.floor(mouseY));
