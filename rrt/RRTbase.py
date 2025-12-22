@@ -14,7 +14,7 @@ class RRTMap:
         self.map = pygame.display.set_mode((self.mapw, self.maph))
         self.map.fill((255, 255, 255))
 
-        self.nodeRad = 0
+        self.nodeRad = 5
         self.nodeThickness = 0
         self.edgeThickness = 1
 
@@ -74,12 +74,12 @@ class RRTGraph:
         self.path = []
 
     def addNode(self, n, x, y):
-        self.x.append(n, x)
-        self.y.append(n, y)
+        self.x.insert(n, x)
+        self.y.append(y)
         
 
     def addEdge(self, parent, child):
-        self.parent.append(child, parent)
+        self.parent.insert(child, parent)
 
     def makeRandomRect(self):
         x = int(random.uniform(0, self.mapw - self.obsticles_dimensions))
@@ -127,14 +127,39 @@ class RRTGraph:
         pass
 
     def isFree(self):
-        pass
+        n = self.numberOfNodes() - 1
+        (x,y) = (self.x[n], self.y[n])
+        obs = self.obsticles.copy()
+        while len(obs) > 0:
+            rect = obs.pop()
+            if rect.collidepoint(x, y):
+                self.removeNode(n)
+                return False
+        return True
         
 
-    def crossObstacle(self):
-        pass
+    def crossObstacle(self, x1, y1, x2, y2):
+        obs = self.obsticles.copy()
+        while len(obs) > 0:
+            rect = obs.pop()
+            for i in range(0,101):
+                u = i / 100
+                x = x1 * u + x2 * (1 - u)
+                y = y1 * u + y2 * (1 - u)
+                if rect.collidepoint(x, y):
+                    return True
+        return False
+        
 
-    def connect(self):
-        pass
+    def connect(self, n1, n2):
+        (x1, y1) = (self.x[n1], self.y[n1])
+        (x2, y2) = (self.x[n2], self.y[n2])
+        if self.crossObstacle(x1, y1, x2, y2):
+            self.removeNode(n2)
+            return False
+        else:
+            self.addEdge(n1, n2)
+            return True
 
     def step(self):
         pass
