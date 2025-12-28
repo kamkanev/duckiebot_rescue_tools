@@ -35,8 +35,9 @@ class RRTMap:
         pygame.draw.circle(self.map, self.Red, self.goal, self.nodeRad + 20, 1)
         self.drawObstacles(obsticles)
 
-    def drawPath(self):
-        pass
+    def drawPath(self, path):
+        for node in path:
+            pygame.draw.circle(self.map, self.Red, node, self.nodeRad + 3, 0)
 
     def drawObstacles(self, obstacles):
         
@@ -124,7 +125,14 @@ class RRTGraph:
         return (x, y)
 
     def nearest(self, node):
-        pass
+        dmin = self.distance(0, node)
+        nnear = 0
+        for i in range(0, node):
+            if self.distance(i, node) < dmin:
+                dmin = self.distance(i, node)
+                nnear = i
+        return nnear
+            
 
     def isFree(self):
         n = self.numberOfNodes() - 1
@@ -161,20 +169,59 @@ class RRTGraph:
             self.addEdge(n1, n2)
             return True
 
-    def step(self):
-        pass
+    def step(self, nnear, nrand, dmax = 35):
+        d = self.distance(nnear, nrand)
+        if d > dmax:
+            u = dmax / d
+            (xnear, ynear) = (self.x[nnear], self.y[nnear])
+            (xrand, yrand) = (self.x[nrand], self.y[nrand])
+            (px, py) = (xrand - xnear, yrand - ynear)
+            theta = math.atan2(py, px)
+            (x, y) = (int(xnear + dmax * math.cos(theta)), int(ynear + dmax * math.sin(theta)))
+            self.removeNode(nrand)
+            if abs(x-self.goal[0]) < dmax and abs(y-self.goal[1]) < dmax:
+                self.addNode(nrand, self.goal[0], self.goal[1])
+                self.goalState = nrand
+                self.goalFlag = True
+            else:
+                self.addNode(nrand, x, y)
+        
 
     def pathToGoal(self):
-        pass
+        if self.goalFlag:
+            self.path = []
+            self.path.append(self.goalState)
+            newp = self.parent[self.goalState]
+            while (newp != 0):
+                self.path.append(newp)
+                newp = self.parent[newp]
+            self.path.append(0)
+        return self.goalFlag
 
     def getPathCoords(self):
-        pass
+        pathCoords = []
+        for node in self.path:
+            x,y = (self.x[node], self.y[node])
+            pathCoords.append((x,y))
+        return pathCoords
 
-    def bias(self):
-        pass
+    def bias(self, ngoal):
+        n = self.numberOfNodes()
+        self.addNode(n, self.goal[0], self.goal[1])
+        nnear = self.nearest(n)
+        self.step(nnear, n)
+        self.connect(nnear, n)
+        return self.x, self.y, self.parent
 
     def expand(self):
-        pass
+        n=self.numberOfNodes()
+        x,y = self.sample_env()
+        self.addNode(n, x, y)
+        if self.isFree():
+            xnearest = self.nearest(n)
+            self.step(xnearest, n)
+            self.connect(xnearest, n)
+        return self.x, self.y, self.parent
 
     def cost(self):
         pass

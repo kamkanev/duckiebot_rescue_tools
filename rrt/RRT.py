@@ -1,6 +1,7 @@
 import pygame
 from RRTbase import RRTGraph
 from RRTbase import RRTMap
+import time
 
 def main():
     dimensions = (1000, 600)
@@ -10,42 +11,53 @@ def main():
     obstacles_number = 30
 
     iteration = 0
+    t1 = 0
 
     pygame.init()
     map = RRTMap(start, goal, dimensions, obstacles_dimensions, obstacles_number)
     graph = RRTGraph(start, goal, dimensions, obstacles_dimensions, obstacles_number)
 
     obstacles = graph.makeObstacles()
-
     map.drawMap(obstacles)
 
-    while(True):
-        x,y = graph.sample_env()
-        n = graph.numberOfNodes()
-        graph.addNode(n, x, y)
-        graph.addEdge(n-1, n)
-        x1,y1 = graph.x[n], graph.y[n]
-        x2,y2 = graph.x[n-1], graph.y[n-1]
-        if graph.isFree():
-            pygame.draw.circle(map.map, map.Red, (graph.x[n], graph.y[n]), map.nodeRad, map.nodeThickness)
+    t1 = time.time()
+    while(not graph.pathToGoal()):
+        elapsed = time.time() - t1
+        t1 = time.time()
+        if elapsed > 10:
+            raise Exception("Timeout: Could not find path in 10 seconds")
+        if iteration % 10 == 0:
+            x, y, parent = graph.bias(goal)
+            pygame.draw.circle(map.map, map.Gray, (x[-1], y[-1]), map.nodeRad + 2, 0)
+            pygame.draw.line(map.map, map.Blue, (x[-1], y[-1]), (x[parent[-1]], y[parent[-1]]), map.edgeThickness)
+        else:
+            x, y, parent = graph.expand()
+            pygame.draw.circle(map.map, map.Gray, (x[-1], y[-1]), map.nodeRad + 2, 0)
+            pygame.draw.line(map.map, map.Blue, (x[-1], y[-1]), (x[parent[-1]], y[parent[-1]]), map.edgeThickness)
 
-            if not graph.crossObstacle(x1, y1, x2, y2):
-                pygame.draw.line(map.map, map.Blue, (x1, y1), (x2, y2), map.edgeThickness)
         
-        
-        pygame.display.update()
+        if iteration % 5 == 0:
+            pygame.display.update()
+        iteration += 1
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                    pygame.quit()
-                    return
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    pygame.quit()
-                    return
-    
-    # pygame.event.clear()
-    # pygame.event.wait(0)
+        # for event in pygame.event.get():
+        #     if event.type == pygame.QUIT:
+        #             pygame.quit()
+        #             return
+        #     if event.type == pygame.KEYDOWN:
+        #         if event.key == pygame.K_ESCAPE:
+        #             pygame.quit()
+        #             return
+    map.drawPath(graph.getPathCoords())
+    pygame.display.update()
+    pygame.event.clear()
+    pygame.event.wait(0)
 
 if __name__ == "__main__":
-    main()
+    result = False
+    while not result:
+        try:
+            main()
+            result = True
+        except:
+            result = False
