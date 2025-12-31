@@ -134,7 +134,15 @@ while run:
     pygame.draw.rect(screen, GRAY, (0, SCREEN_HEIGHT, SCREEN_WIDTH + SIDE_MARGIN, LOWER_MARGIN))
 
     #draw text
+    draw_text(f'File Name: {name}', font, BLACK, 10, SCREEN_HEIGHT + 10)
     draw_text('Tile Selection:', font, BLACK, SCREEN_WIDTH + 20, 20)
+    draw_text('Current Tile:', font, BLACK, SCREEN_WIDTH + 20, SCREEN_HEIGHT - TILE_SIZE - 20)
+
+    draw_text('Press Q or E to rotate tile! - TODO', font, BLACK, SCREEN_WIDTH + SIDE_MARGIN // 4, SCREEN_HEIGHT + TILE_SIZE + 20)
+    draw_text('Left Click: Place Tile | Right Click: Remove Tile', font, BLACK, SCREEN_WIDTH + TILE_SIZE, SCREEN_HEIGHT + TILE_SIZE + 50)
+    draw_text('Save and Load buttons - TODO', font, BLACK, SCREEN_WIDTH // 2 + 20, SCREEN_HEIGHT + LOWER_MARGIN - 130)
+    draw_text('Add the JS graph and nodes in the tiles and made mode for connecting them - TODO', font, BLACK, SCREEN_WIDTH // 3, SCREEN_HEIGHT + LOWER_MARGIN - 160)
+    
     
 
     #save and load map
@@ -156,8 +164,8 @@ while run:
     x = pos[0] // TILE_SIZE
     y = pos[1] // TILE_SIZE
 
-    draw_text(f'Mouse pos: ({pos[0]},{pos[1]})', font, BLACK, 10, SCREEN_HEIGHT + 10)
-    draw_text(f'Mouse grid: ({x},{y})', font, BLACK, 10, SCREEN_HEIGHT + 40)
+    draw_text(f'Mouse pos: ({pos[0]},{pos[1]})', font, BLACK, 10, SCREEN_HEIGHT + 40)
+    draw_text(f'Mouse grid: ({x},{y})', font, BLACK, 10, SCREEN_HEIGHT + 65)
 
     if pos[0] < SCREEN_WIDTH and pos[1] < SCREEN_HEIGHT:
         if pygame.mouse.get_pressed()[0]:
