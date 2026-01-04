@@ -51,11 +51,16 @@ GRAY = (200, 200, 200)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
+GREEN = (0, 255, 0)
 
 font = pygame.font.SysFont('Futura', 28)
 
 TYLE_TYPES = 5
 current_tile = 0
+
+#test graph and spots
+s1 = Spot(SCREEN_WIDTH + SIDE_MARGIN // 2, SCREEN_HEIGHT - TILE_SIZE // 2)
+s2 = Spot(SCREEN_WIDTH + SIDE_MARGIN // 2, SCREEN_HEIGHT + TILE_SIZE // 2)
 
 #create world map
 world_map = []
@@ -164,6 +169,15 @@ def blitRotateCenter(surf, image, topleft, angle):
     new_rect = rotated_image.get_rect(center = image.get_rect(topleft = topleft).center)
 
     surf.blit(rotated_image, new_rect)
+
+#rotate point
+def rotatePoint(point, pivot, angle):
+    vec = point - pivot
+    rotate_vec = vec.rotate(angle)
+
+    new_point = pivot + rotate_vec
+
+    return new_point
 
 #draw text function
 def draw_text(text, font, text_col, x, y):
@@ -351,6 +365,8 @@ def draw_current_tile():
         scaled = pygame.transform.scale(img_list[current_tile%TYLE_TYPES], (TILE_SIZE * 2, TILE_SIZE * 2))
         #screen.blit(scaled, (SCREEN_WIDTH + SIDE_MARGIN // 2 - TILE_SIZE, SCREEN_HEIGHT - TILE_SIZE))
         blitRotateCenter(screen, scaled, (SCREEN_WIDTH + SIDE_MARGIN // 2 - TILE_SIZE, SCREEN_HEIGHT - TILE_SIZE), (current_tile // TYLE_TYPES) * 90)
+        pygame.draw.circle(screen, GREEN, (SCREEN_WIDTH + SIDE_MARGIN // 2, SCREEN_HEIGHT), 12, 0)
+        pygame.draw.circle(screen, RED, rotatePoint(s1.position, (SCREEN_WIDTH + SIDE_MARGIN // 2, SCREEN_HEIGHT), (current_tile // TYLE_TYPES) * 90), 12, 0)
 
 #create buttons
 button_list = []
@@ -367,11 +383,6 @@ for i in range(len(img_list)):
 #create save and load btns
 save_button = button.Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT  + LOWER_MARGIN - 100, save_img, scale=1, hover_image=save_hover_img)
 load_button = button.Button(SCREEN_WIDTH // 2 + 200, SCREEN_HEIGHT + LOWER_MARGIN - 100, load_img, scale=1, hover_image=load_hover_img)
-
-
-#test graph and spots
-s1 = Spot(SCREEN_WIDTH + SIDE_MARGIN // 2 + TILE_SIZE // 4 - 15, SCREEN_HEIGHT - TILE_SIZE // 4 - 15)
-s2 = Spot(SCREEN_WIDTH + SIDE_MARGIN // 2 + TILE_SIZE // 4 - 15, SCREEN_HEIGHT + TILE_SIZE // 4 + 15)
 
 #main loop
 run = True

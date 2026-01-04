@@ -3,8 +3,7 @@ import math
 
 class Spot:
     def __init__(self, x, y, isWall = False):
-        self.x = x
-        self.y = y
+        self.position = pygame.Vector2(x, y)
         self.isWall = isWall
 
         self.size = 12
@@ -28,4 +27,4 @@ class Spot:
 
     def show(self, map, color, showG = False):
         
-        pygame.draw.circle(map, color, (self.x, self.y), self.size, 0)
+        pygame.draw.circle(map, color, (self.position.x, self.position.y), self.size, 0)
