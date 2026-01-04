@@ -366,7 +366,8 @@ def draw_current_tile():
         #screen.blit(scaled, (SCREEN_WIDTH + SIDE_MARGIN // 2 - TILE_SIZE, SCREEN_HEIGHT - TILE_SIZE))
         blitRotateCenter(screen, scaled, (SCREEN_WIDTH + SIDE_MARGIN // 2 - TILE_SIZE, SCREEN_HEIGHT - TILE_SIZE), (current_tile // TYLE_TYPES) * 90)
         pygame.draw.circle(screen, GREEN, (SCREEN_WIDTH + SIDE_MARGIN // 2, SCREEN_HEIGHT), 12, 0)
-        pygame.draw.circle(screen, RED, rotatePoint(s1.position, (SCREEN_WIDTH + SIDE_MARGIN // 2, SCREEN_HEIGHT), (current_tile // TYLE_TYPES) * 90), 12, 0)
+        pygame.draw.circle(screen, RED, rotatePoint(s1.position, (SCREEN_WIDTH + SIDE_MARGIN // 2, SCREEN_HEIGHT), (current_tile // TYLE_TYPES) * 90), s1.size, 0)
+        pygame.draw.circle(screen, BLUE, rotatePoint(s2.position, (SCREEN_WIDTH + SIDE_MARGIN // 2, SCREEN_HEIGHT), (current_tile // TYLE_TYPES) * 90), s2.size, 0)
 
 #create buttons
 button_list = []
@@ -466,8 +467,8 @@ while run:
     draw_current_tile()
 
     #draw test spots
-    s1.show(screen, RED)
-    s2.show(screen, BLUE)
+    # s1.show(screen, RED)
+    # s2.show(screen, BLUE)
 
     #add tile to the map
     pos = pygame.mouse.get_pos()
