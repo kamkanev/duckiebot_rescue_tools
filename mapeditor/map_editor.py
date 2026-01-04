@@ -6,6 +6,25 @@ import sys
 import csv
 import shutil
 
+# Ensure project root is on sys.path so `from utils.graph.AStar import Spot` works
+repo_root = os.path.normpath(os.path.join(os.path.dirname(__file__), '..'))
+if repo_root not in sys.path:
+    sys.path.insert(0, repo_root)
+
+try:
+    from utils.graph.AStar import Spot
+except Exception:
+    # fallback: load by file path if package import still fails
+    try:
+        import importlib.util
+        astar_path = os.path.join(repo_root, 'utils', 'graph', 'AStar.py')
+        spec = importlib.util.spec_from_file_location('a_star', astar_path)
+        a_star = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(a_star)
+        Spot = a_star.Spot
+    except Exception:
+        Spot = None
+
 pygame.init()
 
 #define window size and fps
@@ -350,6 +369,10 @@ save_button = button.Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT  + LOWER_MARGIN - 1
 load_button = button.Button(SCREEN_WIDTH // 2 + 200, SCREEN_HEIGHT + LOWER_MARGIN - 100, load_img, scale=1, hover_image=load_hover_img)
 
 
+#test graph and spots
+s1 = Spot(SCREEN_WIDTH + SIDE_MARGIN // 2 + TILE_SIZE // 4 - 15, SCREEN_HEIGHT - TILE_SIZE // 4 - 15)
+s2 = Spot(SCREEN_WIDTH + SIDE_MARGIN // 2 + TILE_SIZE // 4 - 15, SCREEN_HEIGHT + TILE_SIZE // 4 + 15)
+
 #main loop
 run = True
 while run:
@@ -359,6 +382,8 @@ while run:
     draw_bg()
     draw_grid()
     draw_world()
+
+    
 
     #side and lower margins
     pygame.draw.rect(screen, GRAY, (SCREEN_WIDTH, 0, SIDE_MARGIN, SCREEN_HEIGHT))
@@ -428,6 +453,10 @@ while run:
     #show the selected tile
     pygame.draw.rect(screen, BLUE, button_list[current_tile%TYLE_TYPES].rect, 5)
     draw_current_tile()
+
+    #draw test spots
+    s1.show(screen, RED)
+    s2.show(screen, BLUE)
 
     #add tile to the map
     pos = pygame.mouse.get_pos()
