@@ -44,6 +44,9 @@ SIDE_MARGIN = 600
 name = ""
 placeholder = "untitled_map"
 
+#modes
+graphmode = False
+
 # define grid
 ROWS = 10
 COLS = 15
@@ -367,16 +370,30 @@ def draw_current_tile():
         scaled = pygame.transform.scale(img_list[current_tile%TYLE_TYPES], (TILE_SIZE * 2, TILE_SIZE * 2))
         #screen.blit(scaled, (SCREEN_WIDTH + SIDE_MARGIN // 2 - TILE_SIZE, SCREEN_HEIGHT - TILE_SIZE))
         blitRotateCenter(screen, scaled, (SCREEN_WIDTH + SIDE_MARGIN // 2 - TILE_SIZE, SCREEN_HEIGHT - TILE_SIZE), (current_tile // TYLE_TYPES) * 90)
-        pygame.draw.circle(screen, GREEN, (SCREEN_WIDTH + SIDE_MARGIN // 2, SCREEN_HEIGHT), 12, 0)
+        pygame.draw.circle(screen, GREEN, (SCREEN_WIDTH + SIDE_MARGIN // 2, SCREEN_HEIGHT), 8, 0)
         pygame.draw.circle(screen, RED, rotatePoint(s1.position, (SCREEN_WIDTH + SIDE_MARGIN // 2, SCREEN_HEIGHT), (current_tile // TYLE_TYPES) * 90), s1.size, 0)
         pygame.draw.circle(screen, BLUE, rotatePoint(s2.position, (SCREEN_WIDTH + SIDE_MARGIN // 2, SCREEN_HEIGHT), (current_tile // TYLE_TYPES) * 90), s2.size, 0)
+
+
+def draw_mode_switch():
+    """Draws a clickable mode switch in the side panel and returns its rect."""
+    rect = pygame.Rect(SCREEN_WIDTH + 20, 20, SIDE_MARGIN - 40, 40)
+    # color indicates state
+    on_color = (80, 200, 80)
+    off_color = (200, 80, 80)
+    color = on_color if graphmode else off_color
+    pygame.draw.rect(screen, color, rect)
+    pygame.draw.rect(screen, BLACK, rect, 2)
+    txt = 'Graph Mode: ON' if graphmode else 'Graph Mode: OFF'
+    draw_text(txt, font, BLACK, rect.x + 12, rect.y + 8)
+    return rect
 
 #create buttons
 button_list = []
 button_col = 0
 button_row = 0
 for i in range(len(img_list)):
-    tile_button = button.Button(SCREEN_WIDTH + (150 * button_col) + 120, (120 * button_row) + 60, img_list[i], 1)
+    tile_button = button.Button(SCREEN_WIDTH + (150 * button_col) + 120, (120 * button_row) + 120, img_list[i], 1)
     button_list.append(tile_button)
     button_col += 1
     if button_col == 3:
@@ -428,7 +445,8 @@ while run:
     draw_grid()
     draw_world()
 
-    graph.draw(screen)
+    if graphmode:
+        graph.draw(screen)
 
     #side and lower margins
     pygame.draw.rect(screen, GRAY, (SCREEN_WIDTH, 0, SIDE_MARGIN, SCREEN_HEIGHT))
@@ -436,13 +454,17 @@ while run:
 
     #draw text
     draw_text(f'File Name: {placeholder if len(name) <= 0 else name}', font, BLACK, 10, SCREEN_HEIGHT + 10)
-    draw_text('Tile Selection:', font, BLACK, SCREEN_WIDTH + 20, 20)
-    draw_text('Current Tile:', font, BLACK, SCREEN_WIDTH + 20, SCREEN_HEIGHT - TILE_SIZE - 20)
+    if not graphmode:
+        draw_text('Tile Selection:', font, BLACK, SCREEN_WIDTH + 20, 80)
+        draw_text('Current Tile:', font, BLACK, SCREEN_WIDTH + 20, SCREEN_HEIGHT - TILE_SIZE - 20)
 
-    draw_text('Press Q or E to rotate tile!', font, BLACK, SCREEN_WIDTH + SIDE_MARGIN // 4 + 20, SCREEN_HEIGHT + TILE_SIZE + 20)
-    draw_text('Left Click: Place Tile | Right Click: Remove Tile', font, BLACK, SCREEN_WIDTH + TILE_SIZE, SCREEN_HEIGHT + TILE_SIZE + 50)
+        draw_text('Press Q or E to rotate tile!', font, BLACK, SCREEN_WIDTH + SIDE_MARGIN // 4 + 20, SCREEN_HEIGHT + TILE_SIZE + 20)
+        draw_text('Left Click: Place Tile | Right Click: Remove Tile', font, BLACK, SCREEN_WIDTH + TILE_SIZE, SCREEN_HEIGHT + TILE_SIZE + 50)
     draw_text('Add the JS graph and nodes in the tiles and made mode for connecting them - TODO', font, BLACK, SCREEN_WIDTH // 3, SCREEN_HEIGHT + LOWER_MARGIN - 160)
     
+    # draw graph mode switch and get its rect for click handling
+    mode_rect = draw_mode_switch()
+
     
 
     #save and load map 
@@ -490,14 +512,15 @@ while run:
 
 
     #choose a tile
-    button_count = 0
-    for button_count, b in enumerate(button_list):
-        if b.draw(screen):
-            current_tile = button_count
+    if not graphmode:
+        button_count = 0
+        for button_count, b in enumerate(button_list):
+            if b.draw(screen):
+                current_tile = button_count
     
-    #show the selected tile
-    pygame.draw.rect(screen, BLUE, button_list[current_tile%TYLE_TYPES].rect, 5)
-    draw_current_tile()
+        #show the selected tile
+        pygame.draw.rect(screen, BLUE, button_list[current_tile%TYLE_TYPES].rect, 5)
+        draw_current_tile()
 
     #draw test spots
     # s1.show(screen, RED)
@@ -511,15 +534,16 @@ while run:
     draw_text(f'Mouse pos: ({pos[0]},{pos[1]})', font, BLACK, 10, SCREEN_HEIGHT + 40)
     draw_text(f'Mouse grid: ({x},{y})', font, BLACK, 10, SCREEN_HEIGHT + 65)
 
-    if pos[0] < SCREEN_WIDTH and pos[1] < SCREEN_HEIGHT:
-        if pygame.mouse.get_pressed()[0]:
-            if world_map[y][x] != current_tile:
-                world_map[y][x] = current_tile
+    if not graphmode:
+        if pos[0] < SCREEN_WIDTH and pos[1] < SCREEN_HEIGHT:
+            if pygame.mouse.get_pressed()[0]:
+                if world_map[y][x] != current_tile:
+                    world_map[y][x] = current_tile
+                    calculateAndDelteSpots(x, y)
+                    calculateAndAddSpots(x, y)
+            if pygame.mouse.get_pressed()[2]:
+                world_map[y][x] = -1
                 calculateAndDelteSpots(x, y)
-                calculateAndAddSpots(x, y)
-        if pygame.mouse.get_pressed()[2]:
-            world_map[y][x] = -1
-            calculateAndDelteSpots(x, y)
         
 
     for event in pygame.event.get():
@@ -538,6 +562,16 @@ while run:
                     current_tile -= TYLE_TYPES
                 else:
                     current_tile = current_tile + TYLE_TYPES * 3
+                
+
+        # handle clicks on the graph mode switch
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mx, my = event.pos
+            try:
+                if mode_rect.collidepoint((mx, my)):
+                    graphmode = not graphmode
+            except NameError:
+                # mode_rect may not be defined if drawing failed earlier; ignore
                 pass
 
     # screen.fill((255, 255, 255))
