@@ -12,7 +12,7 @@ if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
 
 try:
-    from utils.graph.AStar import Spot
+    from utils.graph.AStar import Spot, AStarGraph, AStar
 except Exception:
     # fallback: load by file path if package import still fails
     try:
@@ -22,8 +22,12 @@ except Exception:
         a_star = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(a_star)
         Spot = a_star.Spot
+        AStarGraph = a_star.AStarGraph
+        AStar = a_star.AStar
     except Exception:
         Spot = None
+        AStarGraph = None
+        AStar = None
 
 pygame.init()
 

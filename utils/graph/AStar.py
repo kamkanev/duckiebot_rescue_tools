@@ -1,5 +1,6 @@
 import pygame
 import math
+from .. import Utils
 
 class Spot:
     def __init__(self, x, y, isWall = False):
@@ -22,8 +23,8 @@ class Spot:
         self.h = 0
         self.previous = None
 
-    def addNeighbor(self):
-        pass
+    def addNeighbor(self, spot):
+        self.neighbors.append(spot)
 
     def show(self, map, color, showG = False):
         
@@ -33,6 +34,14 @@ class Spot:
 class AStarGraph:
     def __init__(self, spots = []):
         self.spots = spots
+
+        self.Blue = (0, 187, 255)
+        self.Red = (255, 0, 0)
+        self.Green = (0, 255, 0)
+        self.Black = (0, 0, 0)
+        self.Gray = (80, 80, 80)
+        self.White = (255, 255, 255)
+        self.Purple = (66, 96, 228)
     
     def addSpot(self, spot : Spot):
         self.spots.append(spot)
@@ -98,9 +107,15 @@ class AStarGraph:
                 nearestSpot = spot
         return nearestSpot
     
-    # TODO: add drawing all spots and edges arrocdingly
     def draw(self, screen):
-        pass
+        for spot in self.spots:
+            if spot.isWall:
+                spot.show(screen, self.Black)
+            else:
+                spot.show(screen, self.Purple)
+            for n in spot.neighbors:
+                Utils.draw_arrow(screen, spot.position, n.position, self.Green)
+
 
 class AStar:
     def __init__ (self, start: Spot, end: Spot):
