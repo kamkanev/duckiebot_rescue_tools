@@ -50,10 +50,15 @@ class AStarGraph:
         for spot in self.spots:
             if spot.position.x == x and spot.position.y == y:
                 return spot
+            
 
-    # TODO: add remove spot method if posisble later
-    def removeSpot(self, spot):
-        pass
+    def removeSpot(self, spot : Spot):
+        # Remove spots from the graph that match the given spot by position
+        self.spots = [s for s in self.spots if not (s.position.x == spot.position.x and s.position.y == spot.position.y)]
+
+        # Remove any references to the removed spot from other spots' neighbor lists
+        for s in self.spots:
+            s.neighbors = [n for n in s.neighbors if not (n.position.x == spot.position.x and n.position.y == spot.position.y)]
 
     def addEdge(self, spotA: Spot, spotB : Spot, bidir = True):
         spotA.addNeighbor(spotB)
@@ -63,9 +68,13 @@ class AStarGraph:
     def getEdges(self, spot : Spot):
         return spot.neighbors
     
-    # TODO: maybe if needed
-    def removeEdge(self):
-        pass
+    def removeEdge(self, s1 : Spot, s2 : Spot):
+        # Remove neighbor references between s1 and s2 based on position equality
+        for s in self.spots:
+            if s.position.x == s1.position.x and s.position.y == s1.position.y:
+                s.neighbors = [n for n in s.neighbors if not (n.position.x == s2.position.x and n.position.y == s2.position.y)]
+            if s.position.x == s2.position.x and s.position.y == s2.position.y:
+                s.neighbors = [n for n in s.neighbors if not (n.position.x == s1.position.x and n.position.y == s1.position.y)]
 
     def clearSpots(self):
         for spot in self.spots:

@@ -389,6 +389,13 @@ for i in range(len(img_list)):
 save_button = button.Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT  + LOWER_MARGIN - 100, save_img, scale=1, hover_image=save_hover_img)
 load_button = button.Button(SCREEN_WIDTH // 2 + 200, SCREEN_HEIGHT + LOWER_MARGIN - 100, load_img, scale=1, hover_image=load_hover_img)
 
+
+
+# MAIN GRAPH PART MAYBE
+graph = AStarGraph()
+astar = None #later will be defined using AStar(star, end)
+
+
 #main loop
 run = True
 while run:
@@ -509,6 +516,11 @@ while run:
                 pass
 
     # screen.fill((255, 255, 255))
+
+    #updates
+
+    if astar != None:
+        astar.update()
 
     pygame.display.update()
 
