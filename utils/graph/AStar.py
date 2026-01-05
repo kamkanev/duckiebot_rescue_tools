@@ -3,11 +3,11 @@ import math
 from .. import Utils
 
 class Spot:
-    def __init__(self, x, y, isWall = False):
+    def __init__(self, x, y, size = 12, isWall = False):
         self.position = pygame.Vector2(x, y)
         self.isWall = isWall
 
-        self.size = 12
+        self.size = size
 
         self.f = 0 # over all cost g + h
         self.g = 0 #cost to this point
@@ -105,6 +105,15 @@ class AStarGraph:
                 nearestSpot = spot
         return nearestSpot
     
+    def getNearestSpotsIn(self, x, y, maxDist):
+        nearestSpots = []
+
+        for spot in self.spots:
+            dist = math.sqrt((spot.position.x - x) ** 2 + (spot.position.y - y) ** 2)
+            if dist <= maxDist:    
+                nearestSpots.append(spot)
+        return nearestSpots
+    
     def getNearestSpotWithin(self, x, y, minDistance, maxDist):
         nearestSpot = None
         minDist = 100000
@@ -115,6 +124,15 @@ class AStarGraph:
                 minDist = dist
                 nearestSpot = spot
         return nearestSpot
+    
+    def getNearestSpotsWithin(self, x, y, minDistance, maxDist):
+        nearestSpots = []
+
+        for spot in self.spots:
+            dist = math.sqrt((spot.position.x - x) ** 2 + (spot.position.y - y) ** 2)
+            if dist <= maxDist and dist >= minDistance:
+                nearestSpots.append(spot)
+        return nearestSpots
     
     def draw(self, screen):
         for spot in self.spots:

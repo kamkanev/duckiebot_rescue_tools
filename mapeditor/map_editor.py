@@ -339,8 +339,6 @@ def show_message(text, seconds=1.2):
         draw_text(text, font, WHITE, SCREEN_WIDTH // 4 + 16, SCREEN_HEIGHT // 3 + 20)
         pygame.display.update()
 
-
-
 #draw functions
 
 def draw_bg():
@@ -396,6 +394,30 @@ graph = AStarGraph()
 astar = None #later will be defined using AStar(star, end)
 
 
+def calculateAndAddSpots(x, y):
+    nx = x * TILE_SIZE
+    ny = y * TILE_SIZE
+    center = pygame.Vector2(nx + TILE_SIZE // 2, ny + TILE_SIZE // 2)
+
+    #TODO: change nodes according to tile selected
+
+    #--------------------------#
+    pos = rotatePoint((center.x, center.y - TILE_SIZE // 4), center, (current_tile // TYLE_TYPES) * 90)
+    graph.addSpot(Spot(pos.x, pos.y, 5))
+
+    pos = rotatePoint((center.x, center.y + TILE_SIZE // 4), center, (current_tile // TYLE_TYPES) * 90)
+    graph.addSpot(Spot(pos.x, pos.y, 5))
+
+def calculateAndDelteSpots(x, y):
+    nx = x * TILE_SIZE
+    ny = y * TILE_SIZE
+    center = pygame.Vector2(nx + TILE_SIZE // 2, ny + TILE_SIZE // 2)
+
+    for s in graph.getNearestSpotsIn(center.x, center.y, TILE_SIZE // 2):
+        graph.removeSpot(s)
+
+
+
 #main loop
 run = True
 while run:
@@ -406,7 +428,7 @@ while run:
     draw_grid()
     draw_world()
 
-    
+    graph.draw(screen)
 
     #side and lower margins
     pygame.draw.rect(screen, GRAY, (SCREEN_WIDTH, 0, SIDE_MARGIN, SCREEN_HEIGHT))
@@ -493,8 +515,11 @@ while run:
         if pygame.mouse.get_pressed()[0]:
             if world_map[y][x] != current_tile:
                 world_map[y][x] = current_tile
+                calculateAndDelteSpots(x, y)
+                calculateAndAddSpots(x, y)
         if pygame.mouse.get_pressed()[2]:
             world_map[y][x] = -1
+            calculateAndDelteSpots(x, y)
         
 
     for event in pygame.event.get():
