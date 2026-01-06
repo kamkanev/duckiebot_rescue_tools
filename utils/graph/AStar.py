@@ -39,6 +39,7 @@ class AStarGraph:
         self.Red = (255, 0, 0)
         self.Green = (0, 255, 0)
         self.Black = (0, 0, 0)
+        self.D_GRAY = (100, 100, 100)
         self.Gray = (80, 80, 80)
         self.White = (255, 255, 255)
         self.Purple = (66, 96, 228)
@@ -141,7 +142,7 @@ class AStarGraph:
             else:
                 spot.show(screen, self.Purple)
             for n in spot.neighbors:
-                Utils.draw_arrow(screen, spot.position, n.position, self.Green)
+                Utils.draw_arrow(screen, spot.position, n.position, self.D_GRAY, 2, 10, 15)
 
 
 class AStar:

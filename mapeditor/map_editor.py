@@ -77,6 +77,12 @@ is_firstClick = True
 current_spot1 = None
 current_spot2 = None
 
+# UI state for the graph-side list
+graph_list_scroll = 0
+graph_list_selected = None  # index of selected spot for details overlay
+graph_list_expanded = set()  # reserved for future multi-expand support
+graph_overlay_scroll = 0
+
 #test graph and spots
 s1 = Spot(SCREEN_WIDTH + SIDE_MARGIN // 2, SCREEN_HEIGHT - TILE_SIZE // 2)
 s2 = Spot(SCREEN_WIDTH + SIDE_MARGIN // 2, SCREEN_HEIGHT + TILE_SIZE // 2)
@@ -406,6 +412,111 @@ def draw_mode_switch():
     draw_text(txt, font, BLACK, rect.x + 12, rect.y + 8)
     return rect
 
+
+def draw_graph_list():
+    """Draw a scrolling list of graph spots in the right side panel.
+    Clicking an entry selects it and shows a detail overlay with neighbors.
+    """
+    global graph_list_scroll, graph_list_selected
+
+    box_x = SCREEN_WIDTH + 20
+    box_y = 360
+    box_w = SIDE_MARGIN - 40
+    box_h = 2 * LOWER_MARGIN
+
+    pygame.draw.rect(screen, (50, 50, 50), (box_x, box_y, box_w, box_h))
+    pygame.draw.rect(screen, BLACK, (box_x, box_y, box_w, box_h), 2)
+
+    # header
+    draw_text('Spots', font, WHITE, box_x + 8, box_y + 6)
+
+    # list area
+    item_h = 28
+    start_y = box_y + 36
+    total = len(graph.spots)
+    visible = max(1, (box_h - 40) // item_h)
+    max_scroll = max(0, total - visible)
+    graph_list_scroll = max(0, min(graph_list_scroll, max_scroll))
+
+    for i in range(visible):
+        idx = graph_list_scroll + i
+        if idx >= total:
+            break
+        s = graph.spots[idx]
+        y = start_y + i * item_h
+        entry_rect = pygame.Rect(box_x + 4, y, box_w - 8, item_h - 4)
+        # highlight selected
+        if graph_list_selected == idx:
+            pygame.draw.rect(screen, (70, 70, 120), entry_rect)
+        draw_text(f'{idx}: ({int(s.position.x)},{int(s.position.y)}) W={s.isWall}', font, WHITE, entry_rect.x + 6, entry_rect.y + 4)
+
+    # scrollbar hint
+    if total > visible:
+        sb_x = box_x + box_w - 14
+        sb_h = int((visible / total) * (box_h - 40))
+        sb_y = start_y + int((graph_list_scroll / max(1, total - visible)) * (box_h - 40 - sb_h))
+        pygame.draw.rect(screen, (120, 120, 120), (sb_x, sb_y, 10, sb_h))
+
+    # draw details overlay for selected spot (with scrolling for neighbors)
+    if graph_list_selected is not None and 0 <= graph_list_selected < total:
+        s = graph.spots[graph_list_selected]
+        neigh = graph.getEdges(s)
+
+        # compute overlay size to try to fit neighbors but cap to reasonable max
+        max_lines_no_scroll = 8
+        desired_h = 132 + 18 * min(len(neigh), max_lines_no_scroll)
+        overlay_h = max(160, min(360, desired_h))
+        overlay_w = box_w + 40
+        overlay_x = SCREEN_WIDTH // 2 - overlay_w // 2
+        overlay_y = SCREEN_HEIGHT // 2 - overlay_h // 2
+
+        _draw_overlay_rect((overlay_x, overlay_y, overlay_w, overlay_h))
+        pygame.draw.rect(screen, WHITE, (overlay_x, overlay_y, overlay_w, overlay_h), 2)
+        draw_text(f'Spot {graph_list_selected} details', font, WHITE, overlay_x + 12, overlay_y + 8)
+        draw_text(f'Pos: ({int(s.position.x)}, {int(s.position.y)})', font, WHITE, overlay_x + 12, overlay_y + 40)
+        draw_text(f'Wall: {s.isWall}', font, WHITE, overlay_x + 12, overlay_y + 64)
+
+        # neighbors header
+        neigh_label_y = overlay_y + 96
+        draw_text('Neighbors:', font, WHITE, overlay_x + 12, neigh_label_y)
+
+        # list area for neighbors
+        start_y = overlay_y + 120
+        available_pixels = overlay_h - (start_y - overlay_y) - 12
+        line_h = 18
+        visible_lines = max(1, available_pixels // line_h)
+
+        # clamp global scroll
+        global graph_overlay_scroll
+        graph_overlay_scroll = max(0, min(graph_overlay_scroll, max(0, len(neigh) - visible_lines)))
+
+        for i in range(visible_lines):
+            ni = graph_overlay_scroll + i
+            if ni >= len(neigh):
+                break
+            n = neigh[ni]
+            # find neighbor index
+            n_idx = None
+            for j, sp in enumerate(graph.spots):
+                if sp.position.x == n.position.x and sp.position.y == n.position.y:
+                    n_idx = j
+                    break
+            desc = f'  -> {n_idx if n_idx is not None else "?"} ({int(n.position.x)},{int(n.position.y)})'
+            draw_text(desc, font, WHITE, overlay_x + 12, start_y + i * line_h)
+
+        # draw scrollbar if needed
+        if len(neigh) > visible_lines:
+            sb_x = overlay_x + overlay_w - 18
+            sb_y = start_y
+            sb_h = overlay_h - (start_y - overlay_y) - 16
+            handle_h = max(8, int((visible_lines / len(neigh)) * sb_h))
+            max_scroll = len(neigh) - visible_lines
+            handle_y = sb_y + int((graph_overlay_scroll / max(1, max_scroll)) * (sb_h - handle_h))
+            pygame.draw.rect(screen, (80, 80, 80), (sb_x, sb_y, 12, sb_h))
+            pygame.draw.rect(screen, (160, 160, 160), (sb_x + 2, handle_y, 8, handle_h))
+
+
+
 #create buttons
 button_list = []
 gbutton_list = []
@@ -515,6 +626,10 @@ while run:
     
     # draw graph mode switch and get its rect for click handling
     mode_rect = draw_mode_switch()
+
+    # draw graph list in side panel when in graph mode
+    if graphmode:
+        draw_graph_list()
 
     
 
@@ -710,6 +825,48 @@ while run:
             except NameError:
                 # mode_rect may not be defined if drawing failed earlier; ignore
                 pass
+
+        # mouse wheel scroll for the list or overlay
+        if event.type == pygame.MOUSEWHEEL:
+            if graphmode:
+                # if an overlay is open, scroll its neighbor list
+                if graph_list_selected is not None and 0 <= graph_list_selected < len(graph.spots):
+                    try:
+                        neigh_len = len(graph.spots[graph_list_selected].neighbors)
+                        # compute visible lines same as in draw_graph_list
+                        max_lines_no_scroll = 8
+                        desired_h = 132 + 18 * min(neigh_len, max_lines_no_scroll)
+                        overlay_h = max(160, min(360, desired_h))
+                        start_y = (SCREEN_HEIGHT // 2 - overlay_h // 2) + 120
+                        available_pixels = overlay_h - (start_y - (SCREEN_HEIGHT // 2 - overlay_h // 2)) - 12
+                        line_h = 18
+                        visible_lines = max(1, available_pixels // line_h)
+                        max_scroll = max(0, neigh_len - visible_lines)
+                        graph_overlay_scroll = max(0, min(max_scroll, graph_overlay_scroll - event.y * 3))
+                    except Exception:
+                        pass
+                else:
+                    # scroll the main graph list
+                    graph_list_scroll = max(0, graph_list_scroll - event.y * 3)
+
+        # click inside the graph list -> select/clear overlay
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mx, my = event.pos
+            list_x = SCREEN_WIDTH + 20
+            list_y = 360
+            list_w = SIDE_MARGIN - 40
+            list_h = 2 * LOWER_MARGIN
+            # list header offset
+            list_items_y = list_y + 36
+            if graphmode and (list_x <= mx <= list_x + list_w and list_items_y <= my <= list_y + list_h):
+                rel_y = my - list_items_y
+                item_h = 28
+                clicked_idx = graph_list_scroll + (rel_y // item_h)
+                if 0 <= clicked_idx < len(graph.spots):
+                    if graph_list_selected == clicked_idx:
+                        graph_list_selected = None
+                    else:
+                        graph_list_selected = clicked_idx
 
     # screen.fill((255, 255, 255))
 
