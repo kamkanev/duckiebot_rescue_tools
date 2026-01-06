@@ -602,9 +602,13 @@ while run:
 
     
     if pos[0] < SCREEN_WIDTH and pos[1] < SCREEN_HEIGHT:
-        if graphmode and not is_pressedDown:
-            if current_gtile < 3:
-                current_spot1 = graph.getNearestSpotIn(pos[0], pos[1], 15)
+        if graphmode:
+            if not is_pressedDown:
+                if current_gtile < 3:
+                    current_spot1 = graph.getNearestSpotIn(pos[0], pos[1], 15)
+            else:
+                if current_gtile == 1:
+                    pygame.draw.circle(screen, PURPLE_A, pos, 5, 0)
 
         if pygame.mouse.get_pressed()[0]:
             if not graphmode:
@@ -615,13 +619,27 @@ while run:
             else:
                 if current_gtile == 0:
                     if current_spot1 is not None and is_pressedDown:
-                        pygame.draw.circle(screen, PURPLE_A, pos, current_spot1.size + 3, 0)
+                        pygame.draw.circle(screen, PURPLE_A, pos, current_spot1.size, 0)
                         print(f"SELECTED AND MOVING: {current_spot1}, ({pos[0]}, {pos[1]})")
+                elif current_gtile == 1:
+                    cur = graph.getNearestSpotIn(pos[0], pos[1], 10)
+                    if cur is None:
+                        graph.addSpot(Spot(pos[0], pos[1], 5))
+                        #TODO: maybe add a bit delay after ^
+                #TODO: its strange not fully consistant some times have click multiple times
+                elif current_gtile == 2:
+                    if current_spot1 is not None:
+                        current_spot1.isWall = not current_spot1.isWall
 
         if pygame.mouse.get_pressed()[2]:
             if not graphmode:
                 world_map[y][x] = -1
                 calculateAndDelteSpots(x, y)
+            else:
+                if current_gtile == 1:
+                    cur = graph.getNearestSpotIn(pos[0], pos[1], 10)
+                    if cur is not None:
+                        graph.removeSpot(cur)
         
 
     for event in pygame.event.get():
@@ -642,16 +660,22 @@ while run:
                     current_tile = current_tile + TYLE_TYPES * 3
             
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if graphmode and current_gtile == 0:
+            if graphmode and (current_gtile == 0 or current_gtile == 2):
                 is_pressedDown = True
 
         if event.type == pygame.MOUSEBUTTONUP:
-            if graphmode and current_gtile == 0:
-                if is_pressedDown:
-                    is_pressedDown = False
-                    if current_spot1 is not None:
-                        current_spot1.position.x = pos[0]
-                        current_spot1.position.y = pos[1]
+            if graphmode:
+                if current_gtile == 0:
+                    if is_pressedDown:
+                        is_pressedDown = False
+                        if current_spot1 is not None:
+                            cur = graph.getNearestSpotIn(pos[0], pos[1], current_spot1.size * 2)
+                            if cur is None and (pos[0] < SCREEN_WIDTH and pos[1] < SCREEN_HEIGHT):
+                                current_spot1.position.x = pos[0]
+                                current_spot1.position.y = pos[1]
+                elif current_gtile == 2:
+                    if is_pressedDown:
+                        is_pressedDown = False
 
         # handle clicks on the graph mode switch
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
