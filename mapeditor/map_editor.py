@@ -55,15 +55,26 @@ TILE_SIZE = SCREEN_HEIGHT // ROWS
 #define colors
 WHITE = (255, 255, 255)
 GRAY = (200, 200, 200)
+D_GRAY = (214, 214, 214)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 GREEN = (0, 255, 0)
+PURPLE = (66, 96, 228)
+
+PURPLE_A = (66, 96, 228, 128)
+BLACK_A = (0, 0, 0, 120)
 
 font = pygame.font.SysFont('Futura', 28)
 
 TYLE_TYPES = 5
+GTYLE_TYPES = 5
 current_tile = 0
+current_gtile = 0
+
+is_pressedDown = False
+current_spot1 = None
+current_spot2 = None
 
 #test graph and spots
 s1 = Spot(SCREEN_WIDTH + SIDE_MARGIN // 2, SCREEN_HEIGHT - TILE_SIZE // 2)
@@ -103,6 +114,12 @@ for x in range(TYLE_TYPES):
     img = pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
     img_list.append(img)
 
+gimg_list = []
+for x in range(GTYLE_TYPES):
+    img_path = os.path.join(tiles_dir, f'{x}_gtile.png')
+    img = pygame.image.load(img_path).convert_alpha()
+    img = pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
+    gimg_list.append(img)
 
 def save_map(file_name):
     #save the map as a csv file in a folder named the same as the map file and in the saves folder
@@ -390,8 +407,11 @@ def draw_mode_switch():
 
 #create buttons
 button_list = []
+gbutton_list = []
 button_col = 0
 button_row = 0
+gbutton_col = 0
+gbutton_row = 0
 for i in range(len(img_list)):
     tile_button = button.Button(SCREEN_WIDTH + (150 * button_col) + 120, (120 * button_row) + 120, img_list[i], 1)
     button_list.append(tile_button)
@@ -399,6 +419,14 @@ for i in range(len(img_list)):
     if button_col == 3:
         button_col = 0
         button_row += 1
+
+for i in range(len(gimg_list)):
+    tile_button = button.Button(SCREEN_WIDTH + (150 * gbutton_col) + 120, (120 * gbutton_row) + 120, gimg_list[i], 1)
+    gbutton_list.append(tile_button)
+    gbutton_col += 1
+    if gbutton_col == 3:
+        gbutton_col = 0
+        gbutton_row += 1
 
 #create save and load btns
 save_button = button.Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT  + LOWER_MARGIN - 100, save_img, scale=1, hover_image=save_hover_img)
@@ -442,11 +470,31 @@ while run:
     clock.tick(FPS)
 
     draw_bg()
-    draw_grid()
+    if not graphmode:
+        draw_grid()
     draw_world()
 
     if graphmode:
         graph.draw(screen)
+        for s in graph.spots:
+            pygame.draw.circle(screen, BLACK, s.position, s.size + 5, 1)
+            pygame.draw.circle(screen, BLACK, s.position, s.size // 3, 0)
+        
+        if current_spot1 is not None:
+            if is_pressedDown:
+                pygame.draw.circle(screen, GREEN, current_spot1.position, current_spot1.size + 5, 1)
+                pygame.draw.circle(screen, GREEN, current_spot1.position, 2, 0)
+            else:
+                pygame.draw.circle(screen, GRAY, current_spot1.position, current_spot1.size + 5, 1)
+                pygame.draw.circle(screen, GRAY, current_spot1.position, current_spot1.size // 3, 0)
+        elif current_spot2 is not None:
+            if is_pressedDown:
+                pygame.draw.circle(screen, GREEN, current_spot2.position, current_spot2.size + 5, 1)
+                pygame.draw.circle(screen, GREEN, current_spot2.position, 2, 0)
+            else:
+                pygame.draw.circle(screen, GRAY, current_spot2.position, current_spot2.size + 5, 1)
+                pygame.draw.circle(screen, GRAY, current_spot2.position, current_spot2.size // 3, 0)
+            
 
     #side and lower margins
     pygame.draw.rect(screen, GRAY, (SCREEN_WIDTH, 0, SIDE_MARGIN, SCREEN_HEIGHT))
@@ -460,7 +508,9 @@ while run:
 
         draw_text('Press Q or E to rotate tile!', font, BLACK, SCREEN_WIDTH + SIDE_MARGIN // 4 + 20, SCREEN_HEIGHT + TILE_SIZE + 20)
         draw_text('Left Click: Place Tile | Right Click: Remove Tile', font, BLACK, SCREEN_WIDTH + TILE_SIZE, SCREEN_HEIGHT + TILE_SIZE + 50)
-    draw_text('Add the JS graph and nodes in the tiles and made mode for connecting them - TODO', font, BLACK, SCREEN_WIDTH // 3, SCREEN_HEIGHT + LOWER_MARGIN - 160)
+    else:
+        draw_text('Tool Selection:', font, BLACK, SCREEN_WIDTH + 20, 80)
+    draw_text('Add the JS graph and nodes in the tiles and made mode for connecting them - TODO', font, BLACK, SCREEN_WIDTH // 3, SCREEN_HEIGHT + LOWER_MARGIN - 40)
     
     # draw graph mode switch and get its rect for click handling
     mode_rect = draw_mode_switch()
@@ -521,6 +571,14 @@ while run:
         #show the selected tile
         pygame.draw.rect(screen, BLUE, button_list[current_tile%TYLE_TYPES].rect, 5)
         draw_current_tile()
+    else:
+        button_count = 0
+        for button_count, b in enumerate(gbutton_list):
+            if b.draw(screen):
+                current_gtile = button_count
+    
+        #show the selected tile
+        pygame.draw.rect(screen, BLUE, gbutton_list[current_gtile].rect, 5)
 
     #draw test spots
     # s1.show(screen, RED)
@@ -534,14 +592,34 @@ while run:
     draw_text(f'Mouse pos: ({pos[0]},{pos[1]})', font, BLACK, 10, SCREEN_HEIGHT + 40)
     draw_text(f'Mouse grid: ({x},{y})', font, BLACK, 10, SCREEN_HEIGHT + 65)
 
-    if not graphmode:
-        if pos[0] < SCREEN_WIDTH and pos[1] < SCREEN_HEIGHT:
-            if pygame.mouse.get_pressed()[0]:
+    if graphmode:
+
+        if current_spot1 is not None:
+            draw_text(f'Selected 1st Spot: Spot ({current_spot1.position.x}, {current_spot1.position.y}, {current_spot1.isWall})', font, BLACK, SCREEN_WIDTH // 3, SCREEN_HEIGHT + 10)
+        if current_gtile > 2:
+            if current_spot2 is not None:
+                draw_text(f'Selected 1st Spot: Spot ({current_spot2.position.x}, {current_spot2.position.y}, {current_spot2.isWall})', font, BLACK, SCREEN_WIDTH // 3, SCREEN_HEIGHT + 40)
+
+    
+    if pos[0] < SCREEN_WIDTH and pos[1] < SCREEN_HEIGHT:
+        if graphmode and not is_pressedDown:
+            if current_gtile < 3:
+                current_spot1 = graph.getNearestSpotIn(pos[0], pos[1], 15)
+
+        if pygame.mouse.get_pressed()[0]:
+            if not graphmode:
                 if world_map[y][x] != current_tile:
                     world_map[y][x] = current_tile
                     calculateAndDelteSpots(x, y)
                     calculateAndAddSpots(x, y)
-            if pygame.mouse.get_pressed()[2]:
+            else:
+                if current_gtile == 0:
+                    if current_spot1 is not None and is_pressedDown:
+                        pygame.draw.circle(screen, PURPLE_A, pos, current_spot1.size + 3, 0)
+                        print(f"SELECTED AND MOVING: {current_spot1}, ({pos[0]}, {pos[1]})")
+
+        if pygame.mouse.get_pressed()[2]:
+            if not graphmode:
                 world_map[y][x] = -1
                 calculateAndDelteSpots(x, y)
         
@@ -562,7 +640,18 @@ while run:
                     current_tile -= TYLE_TYPES
                 else:
                     current_tile = current_tile + TYLE_TYPES * 3
-                
+            
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if graphmode and current_gtile == 0:
+                is_pressedDown = True
+
+        if event.type == pygame.MOUSEBUTTONUP:
+            if graphmode and current_gtile == 0:
+                if is_pressedDown:
+                    is_pressedDown = False
+                    if current_spot1 is not None:
+                        current_spot1.position.x = pos[0]
+                        current_spot1.position.y = pos[1]
 
         # handle clicks on the graph mode switch
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
