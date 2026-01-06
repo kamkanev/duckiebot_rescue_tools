@@ -143,6 +143,15 @@ def save_map(file_name):
                 writer.writerow(row)
         os.replace(tmp_path, final_path)
         print(f'Map saved as {file_name}.csv')
+        # also try to save graph alongside the map
+        try:
+            okg = save_graph(file_name)
+            if okg:
+                print(f'Graph saved as {file_name}.json')
+            else:
+                print(f'Failed to save graph for {file_name}')
+        except Exception:
+            pass
         return True
     except Exception as e:
         print(f'Error saving map {file_name}: {e}')
@@ -185,6 +194,15 @@ def load_map(file_name):
 
         world_map = new_map
         print(f'Map {file_name}.csv loaded successfully')
+        # try to load graph with same name (optional)
+        try:
+            okg = load_graph(file_name)
+            if okg:
+                print(f'Graph {file_name}.json loaded successfully')
+            else:
+                print(f'No graph file for {file_name} (skipping)')
+        except Exception:
+            pass
         return True
     except FileNotFoundError:
         print(f'No save file found with the name {file_name}.csv')
@@ -200,6 +218,97 @@ def blitRotateCenter(surf, image, topleft, angle):
     new_rect = rotated_image.get_rect(center = image.get_rect(topleft = topleft).center)
 
     surf.blit(rotated_image, new_rect)
+
+
+def save_graph(file_name):
+    """Save the current `graph` to JSON in the same save folder as the map."""
+    if len(file_name) <= 0:
+        file_name = placeholder
+    save_dir = os.path.join(os.path.dirname(__file__), 'saves', file_name)
+    try:
+        os.makedirs(save_dir, exist_ok=True)
+        final_path = os.path.join(save_dir, f'{file_name}.json')
+        tmp_path = final_path + '.tmp'
+
+        data = {
+            'spots': [],
+            'neighbors': []
+        }
+        for s in graph.spots:
+            data['spots'].append({
+                'x': float(s.position.x),
+                'y': float(s.position.y),
+                'size': int(s.size),
+                'isWall': bool(s.isWall)
+            })
+
+        # neighbors by index
+        for s in graph.spots:
+            neigh_idx = []
+            for n in s.neighbors:
+                for j, sp in enumerate(graph.spots):
+                    if sp.position.x == n.position.x and sp.position.y == n.position.y:
+                        neigh_idx.append(j)
+                        break
+            data['neighbors'].append(neigh_idx)
+
+        with open(tmp_path, 'w') as f:
+            json.dump(data, f, indent=2)
+
+        os.replace(tmp_path, final_path)
+        return True
+    except Exception as e:
+        print(f'Error saving graph {file_name}: {e}')
+        try:
+            if 'tmp_path' in locals() and os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        except Exception:
+            pass
+        return False
+
+
+def load_graph(file_name):
+    """Load graph JSON saved with the given map name. Returns True if loaded."""
+    global graph, graph_list_selected, graph_overlay_scroll, graph_list_scroll
+    if len(file_name) <= 0:
+        file_name = placeholder
+    load_path = os.path.join(os.path.dirname(__file__), 'saves', file_name, f'{file_name}.json')
+    try:
+        with open(load_path, 'r') as f:
+            data = json.load(f)
+
+        spots_data = data.get('spots', [])
+        neigh_data = data.get('neighbors', [])
+
+        new_spots = []
+        for sd in spots_data:
+            x = sd.get('x', 0)
+            y = sd.get('y', 0)
+            size = sd.get('size', 12)
+            isWall = sd.get('isWall', False)
+            new_spots.append(Spot(x, y, size, isWall))
+
+        graph.spots = new_spots
+
+        # restore neighbors
+        for i, neigh_list in enumerate(neigh_data):
+            if i >= len(graph.spots):
+                break
+            graph.spots[i].neighbors = []
+            for j in neigh_list:
+                if 0 <= j < len(graph.spots):
+                    graph.spots[i].neighbors.append(graph.spots[j])
+
+        # reset UI selections
+        graph_list_selected = None
+        graph_overlay_scroll = 0
+        graph_list_scroll = 0
+        return True
+    except FileNotFoundError:
+        return False
+    except Exception as e:
+        print(f'Error loading graph {file_name}: {e}')
+        return False
 
 #rotate point
 def rotatePoint(point, pivot, angle):
@@ -514,8 +623,6 @@ def draw_graph_list():
             handle_y = sb_y + int((graph_overlay_scroll / max(1, max_scroll)) * (sb_h - handle_h))
             pygame.draw.rect(screen, (80, 80, 80), (sb_x, sb_y, 12, sb_h))
             pygame.draw.rect(screen, (160, 160, 160), (sb_x + 2, handle_y, 8, handle_h))
-
-
 
 #create buttons
 button_list = []
