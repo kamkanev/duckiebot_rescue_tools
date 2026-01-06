@@ -54,5 +54,5 @@ TODO
 - [ ] Add nodes in each tile to a graph can be formed
 - [x] Make the nodes rotate according to the tiles
 - [x] Add a graph edit mode to see the nodes/spots and connected them correctly (edit the graph)
-- [ ] Save it in a JSON file in the map folder
+- [X] Save it in a JSON file in the map folder
 - [ ] Add autoconnection tool maybe
