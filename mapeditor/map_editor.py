@@ -73,6 +73,7 @@ current_tile = 0
 current_gtile = 0
 
 is_pressedDown = False
+is_firstClick = True
 current_spot1 = None
 current_spot2 = None
 
@@ -487,7 +488,7 @@ while run:
             else:
                 pygame.draw.circle(screen, GRAY, current_spot1.position, current_spot1.size + 5, 1)
                 pygame.draw.circle(screen, GRAY, current_spot1.position, current_spot1.size // 3, 0)
-        elif current_spot2 is not None:
+        if current_spot2 is not None:
             if is_pressedDown:
                 pygame.draw.circle(screen, GREEN, current_spot2.position, current_spot2.size + 5, 1)
                 pygame.draw.circle(screen, GREEN, current_spot2.position, 2, 0)
@@ -598,7 +599,7 @@ while run:
             draw_text(f'Selected 1st Spot: Spot ({current_spot1.position.x}, {current_spot1.position.y}, {current_spot1.isWall})', font, BLACK, SCREEN_WIDTH // 3, SCREEN_HEIGHT + 10)
         if current_gtile > 2:
             if current_spot2 is not None:
-                draw_text(f'Selected 1st Spot: Spot ({current_spot2.position.x}, {current_spot2.position.y}, {current_spot2.isWall})', font, BLACK, SCREEN_WIDTH // 3, SCREEN_HEIGHT + 40)
+                draw_text(f'Selected 2nd Spot: Spot ({current_spot2.position.x}, {current_spot2.position.y}, {current_spot2.isWall})', font, BLACK, SCREEN_WIDTH // 3, SCREEN_HEIGHT + 40)
 
     
     if pos[0] < SCREEN_WIDTH and pos[1] < SCREEN_HEIGHT:
@@ -606,6 +607,12 @@ while run:
             if not is_pressedDown:
                 if current_gtile < 3:
                     current_spot1 = graph.getNearestSpotIn(pos[0], pos[1], 15)
+                else:
+                    if is_firstClick:
+                        current_spot1 = graph.getNearestSpotIn(pos[0], pos[1], 15)
+                    else:
+                        current_spot2 = graph.getNearestSpotIn(pos[0], pos[1], 15)
+
             else:
                 if current_gtile == 1:
                     pygame.draw.circle(screen, PURPLE_A, pos, 5, 0)
@@ -620,7 +627,7 @@ while run:
                 if current_gtile == 0:
                     if current_spot1 is not None and is_pressedDown:
                         pygame.draw.circle(screen, PURPLE_A, pos, current_spot1.size, 0)
-                        print(f"SELECTED AND MOVING: {current_spot1}, ({pos[0]}, {pos[1]})")
+                        # print(f"SELECTED AND MOVING: {current_spot1}, ({pos[0]}, {pos[1]})")
                 elif current_gtile == 1:
                     cur = graph.getNearestSpotIn(pos[0], pos[1], 10)
                     if cur is None:
@@ -660,7 +667,7 @@ while run:
                     current_tile = current_tile + TYLE_TYPES * 3
             
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if graphmode and (current_gtile == 0 or current_gtile == 2):
+            if graphmode and (current_gtile == 0 or current_gtile >= 2):
                 is_pressedDown = True
 
         if event.type == pygame.MOUSEBUTTONUP:
@@ -676,6 +683,21 @@ while run:
                 elif current_gtile == 2:
                     if is_pressedDown:
                         is_pressedDown = False
+
+                elif current_gtile > 2:
+                    if is_pressedDown:
+                        is_pressedDown = False
+                        if is_firstClick:
+                            if current_spot1 is not None:
+                                is_firstClick = False
+
+                        else:
+                            if current_spot2 is not None:
+                                
+                                #clear the clicks
+                                is_firstClick = True
+                                current_spot1 = None
+                                current_spot2 = None
 
         # handle clicks on the graph mode switch
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
