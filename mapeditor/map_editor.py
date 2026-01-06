@@ -694,6 +694,8 @@ while run:
                         else:
                             if current_spot2 is not None:
                                 
+                                graph.addEdge(current_spot1, current_spot2, (current_gtile == 4))
+
                                 #clear the clicks
                                 is_firstClick = True
                                 current_spot1 = None
