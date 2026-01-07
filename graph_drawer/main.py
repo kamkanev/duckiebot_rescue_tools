@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import math
 
-img = cv2.imread("assets/map1.jpg", 1)
+img = cv2.imread("assets/try3.jpg", 1)
 original = img.copy()
 draw_weights = False 
 dotRadius = 6
@@ -1484,7 +1484,7 @@ for node in turningPointNodes:
                         crossed_x = x_search
                         crossed_y = y_search
             if(crossed_x != 0):
-                findClose_withoutBorder(square_x_start,square_x_end,square_y_start,square_y_end,crossed_x,crossed_y, node_x,node_y, resultBorder)
+                findClose_withoutBorder(square_x_start,square_x_end,square_y_start,square_y_end,crossed_x,crossed_y, x,y, resultBorder)
             for point in turningPointNodes: 
                 if(foundNode['weight'] != 0):
                     if(node['type'] == 'outer'):
@@ -1528,7 +1528,7 @@ for node in turningPointNodes:
                         crossed_x = x_search
                         crossed_y = y_search
             if(crossed_x != 0):
-                findClose_withoutBorder(square_x_start,square_x_end,square_y_start,square_y_end,crossed_x,crossed_y, node_x,node_y, resultBorder)
+                findClose_withoutBorder(square_x_start,square_x_end,square_y_start,square_y_end,crossed_x,crossed_y, x,y, resultBorder)
             for point in turningPointNodes: 
                 if(foundNode['weight'] != 0):
                     if(node['type'] == 'outer'):
@@ -1571,7 +1571,7 @@ for node in turningPointNodes:
                         crossed_x = x_search
                         crossed_y = y_search
             if(crossed_x != 0):
-                findClose_withoutBorder(square_x_start,square_x_end,square_y_start,square_y_end,crossed_x,crossed_y, node_x,node_y, resultBorder)
+                findClose_withoutBorder(square_x_start,square_x_end,square_y_start,square_y_end,crossed_x,crossed_y, x,y, resultBorder)
             for point in turningPointNodes: 
                 if(foundNode['weight'] != 0):
                     if(node['type'] == 'outer'):
@@ -1719,9 +1719,10 @@ print(f"✓ Number of Roads: {len(roads)}")
 # cv2.imshow("yellowBlocks", maskYel)
 #imgT = cv2.imread("cropped.jpg", 0)
 
-# cv2.imwrite("test.jpg", resultBorder)
-# cv2.imwrite("test1.jpg", resultYellow)
-# cv2.imwrite("test2.jpg", resultWhite)
+cv2.imwrite("test.jpg", resultWhite)
+cv2.imwrite("test1.jpg", resultRed)
+cv2.imwrite("test2.jpg", resultYellow)
+cv2.imwrite("test3.jpg", resultBorder)
 
 
 # cv2.imwrite("yellowMask.jpg", resultYellow)
