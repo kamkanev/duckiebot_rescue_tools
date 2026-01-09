@@ -62,3 +62,9 @@ def _distance(self, a: pygame.Vector2, b: pygame.Vector2):
     side2 = b.y - a.y
 
     return math.sqrt(side1*side1 + side2*side2)
+
+def removeFromArray(arr, el):
+    for i in range(len(arr) - 1, -1, -1):
+        if arr[i] == el:
+            arr.pop(i)
+            break

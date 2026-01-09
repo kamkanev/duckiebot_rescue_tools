@@ -27,8 +27,10 @@ class Spot:
         self.neighbors.append(spot)
 
     def show(self, map, color, showG = False):
-        
-        pygame.draw.circle(map, color, (self.position.x, self.position.y), self.size, 0)
+        if not self.isWall:
+            pygame.draw.circle(map, color, (self.position.x, self.position.y), self.size, 0)
+        else:
+            pygame.draw.circle(map, (0, 0, 0), (self.position.x, self.position.y), self.size, 0)
 
 
 class AStarGraph:
@@ -187,13 +189,70 @@ class AStar:
 
     def _heuristic(self, a : Spot, b : Spot, shortest = True):
         hip = self._distance(a, b)
-        manhantanDis = math.abs(a.position.x - b.position.x) + math.abs(a.position.y - b.position.y)
+        manhantanDis = math.fabs(a.position.x - b.position.x) + math.fabs(a.position.y - b.position.y)
 
         return hip if shortest else manhantanDis
 
     # TODO: update the algorithm accordingly
     def update(self):
-        pass
+        if not self.isDone:
+            if len(self.openSet) > 0:
+                
+                winner = 0
+
+                for i in  range(len(self.openSet)):
+                    if self.openSet[i].f < self.openSet[winner].f:
+                        winner = i
+                
+                curr = self.openSet[winner]
+
+                if curr == self.end:
+
+                    print(self.path)
+                    print("Done")
+                    self.isDone = True
+                
+                Utils.removeFromArray(self.openSet, curr)
+                self.closeSet.append(curr)
+
+                neighbors = curr.neighbors
+
+                for neighbor in  neighbors:
+
+                    if neighbor not in self.closeSet and not neighbor.isWall:
+                        tempG = curr.g +1 #cost
+
+                        newPath = False
+
+                        if neighbor in self.openSet:
+                            if tempG < neighbor.g:
+                                neighbor.g = tempG
+                                newPath = True
+                        else:
+                            #debug maybe
+                            neighbor.g = tempG
+                            newPath = True
+                            self.openSet.append(neighbor)
+                        
+                        if newPath:
+                            neighbor.h = self._heuristic(neighbor, self.end)
+                            neighbor.f = neighbor.g + neighbor.h
+                            neighbor.previous = curr
+
+            else:
+                #no solution
+                print("No solution")
+                self.noSolution = True
+                self.isDone = True
+            
+            if not self.noSolution:
+                self.path = []
+                t = curr
+                self.path.append(t)
+
+                while(t.previous):
+                    self.path.append(t.previous)
+                    t = t.previous
 
 
     def draw(self,screen, showG = False):
