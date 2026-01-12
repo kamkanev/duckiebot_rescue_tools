@@ -948,12 +948,11 @@ for intersection in intersectionNodes:
     searchRadius = intersection['height'] + 10
     
     # Create a square search area with intersection as center
-    search_radius = searchRadius # Size of the square from center
+    search_radius = searchRadius + 5 # Size of the square from center
     square_x_start = max(0, int_x - search_radius)
     square_x_end = min(cropped.shape[1], int_x + search_radius)
     square_y_start = max(0, int_y - search_radius)
     square_y_end = min(cropped.shape[0], int_y + search_radius)
-    
     print(f"\nSearching around intersection at ({int_x}, {int_y})")
     
     # Search for vertical extension nodes
