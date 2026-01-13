@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import math
 
-img = cv2.imread("assets/try7.jpg", 1)
+img = cv2.imread("assets/try3.jpg", 1)
 original = img.copy()
 draw_weights = False 
 dotRadius = 6
@@ -959,11 +959,11 @@ for intersection in intersectionNodes:
     for v_ext in verticalExtensionNodes:
         if (square_x_start <= v_ext['x'] <= square_x_end and 
             square_y_start <= v_ext['y'] <= square_y_end):
-            weight = calculate_distance(int_x, int_y, v_ext['x'], v_ext['y'])
+            weight = int(calculate_distance(int_x, int_y, v_ext['x'], v_ext['y']))
             edges.append({
-                'from': intersection,
-                'to': v_ext,
-                'weight': weight
+                'from': (int(intersection['x']),int(intersection['y'])),
+                'to': (int(v_ext['x']),int(v_ext['y'])),
+                'weight': int(weight)
             })
             v_ext['from'] = (int_x,int_y)
             draw_arrow_with_weight(result, (int_x, int_y), (v_ext['x'], v_ext['y']), weight)
@@ -973,10 +973,10 @@ for intersection in intersectionNodes:
     for h_ext in horizontalExtensionNodes:
         if (square_x_start <= h_ext['x'] <= square_x_end and 
             square_y_start <= h_ext['y'] <= square_y_end):
-            weight = calculate_distance(int_x, int_y, h_ext['x'], h_ext['y'])
+            weight = int(calculate_distance(int_x, int_y, h_ext['x'], h_ext['y']))
             edges.append({
-                'from': intersection,
-                'to': h_ext,
+                'from': (int(intersection['x']),int(intersection['y'])),
+                'to': (int(h_ext['x']),int(h_ext['y'])),
                 'weight': weight
             })
             h_ext['from'] = (int_x,int_y)
@@ -987,10 +987,10 @@ for intersection in intersectionNodes:
     for center in centerBlock:
         if (square_x_start <= center['x'] <= square_x_end and 
             square_y_start <= center['y'] <= square_y_end):
-            weight = calculate_distance(center['x'], center['y'], int_x, int_y)
+            weight = int(calculate_distance(center['x'], center['y'], int_x, int_y))
             edges.append({
-                'from': center,
-                'to': intersection,
+                'from': (int(center['x']),int(center['y'])),
+                'to': (int(intersection['x']),int(intersection['y'])),
                 'weight': weight
             })
             center['to'] = (int_x,int_y)
@@ -1110,9 +1110,9 @@ for node in centerBlock:
                 
                 if(foundNode['weight'] != 0):
                     edges.append({
-                            'from': node,
-                            'to': foundNode,
-                            'weight': foundNode['weight']
+                            'from': (int(node_x),int(node_y)),
+                            'to': (int(foundNode['x']),int(foundNode['y'])),
+                            'weight': int(foundNode['weight'])
                         })
                     for verExt in verticalExtensionNodes:
                         if(verExt['x'] == foundNode['x']) and (verExt['y'] == foundNode['y']):
@@ -1138,9 +1138,9 @@ for node in centerBlock:
                 #cv2.rectangle(result,(square_x_start,square_y_start),(square_x_end,square_y_end),(0,0,255),1)
                 if(foundNode['weight'] != 0): 
                     edges.append({
-                            'from': foundNode,
-                            'to': node,
-                            'weight': foundNode['weight']
+                            'from': (int(foundNode['x']),int(foundNode['y'])),
+                            'to': (int(node_x),int(node_y)),
+                            'weight': int(foundNode['weight'])
                         })
                     for verExt in verticalExtensionNodes:
                         if(verExt['x'] == foundNode['x']) and (verExt['y'] == foundNode['y']):
@@ -1175,9 +1175,9 @@ for node in centerBlock:
                         marked = markPoint(foundNode['x'],foundNode['y'],turningPointNodes,node_x,node_y,'to')
                         if(marked):
                             edges.append({
-                                'from': foundNode,
-                                'to': node,
-                                'weight': foundNode['weight']
+                                'from': (int(foundNode['x']),int(foundNode['y'])),
+                                'to': (int(node_x),int(node_y)),
+                                'weight': int(foundNode['weight'])
                             })
                             for point in turningPointNodes:
                                 if(int(point['point'][0]) == foundNode['x']) and (int(point['point'][1]) == foundNode['y']):
@@ -1215,9 +1215,9 @@ for node in centerBlock:
                 if(foundNode['weight'] != 0):
                     # print(f"left node found at {node_x}, {node_y}")
                     edges.append({
-                            'from': foundNode,
-                            'to': node,
-                            'weight': foundNode['weight']
+                            'from': (int(foundNode['x']),int(foundNode['y'])),
+                            'to': (int(node_x),int(node_y)),
+                            'weight': int(foundNode['weight'])
                         })
                     for verExt in verticalExtensionNodes:
                         if(verExt['x'] == foundNode['x']) and (verExt['y'] == foundNode['y']):
@@ -1254,9 +1254,9 @@ for node in centerBlock:
                         if(marked):
                             #print(f"Marked with {foundNode['x'],foundNode['y']}")
                             edges.append({
-                                'from': foundNode,
-                                'to': node,
-                                'weight': foundNode['weight']
+                                'from': (int(foundNode['x']),int(foundNode['y'])),
+                                'to': (int(node_x),int(node_y)),
+                                'weight': int(foundNode['weight'])
                             })
                             for point in turningPointNodes:
                                 if(int(point['point'][0]) == foundNode['x']) and int(point['point'][1]) == foundNode['y']:
@@ -1284,9 +1284,9 @@ for node in centerBlock:
 
                 if(foundNode['weight'] != 0):
                     edges.append({
-                            'from': node,
-                            'to': foundNode,
-                            'weight': foundNode['weight']
+                            'from': (int(node_x),int(node_y)),
+                            'to': (int(foundNode['x']),int(foundNode['y'])),
+                            'weight': int(foundNode['weight'])
                         })
                     for verExt in verticalExtensionNodes:
                         if(verExt['x'] == foundNode['x']) and (verExt['y'] == foundNode['y']):
@@ -1325,9 +1325,9 @@ for node in centerBlock:
            
                 if(foundNode['weight'] != 0):
                     edges.append({
-                            'from': foundNode,
-                            'to': node,
-                            'weight': foundNode['weight']
+                            'from': (int(foundNode['x']),int(foundNode['y'])),
+                            'to': (int(node_x),int(node_y)),
+                            'weight': int(foundNode['weight'])
                         })
                     for horExt in horizontalExtensionNodes:
                         if(horExt['x'] == foundNode['x']) and (horExt['y'] == foundNode['y']):
@@ -1363,9 +1363,9 @@ for node in centerBlock:
                         marked = markPoint(foundNode['x'],foundNode['y'],turningPointNodes,node_x,node_y,'to')
                         if(marked):
                             edges.append({
-                                'from': foundNode,
-                                'to': node,
-                                'weight': foundNode['weight']
+                                'from': (int(foundNode['x']),int(foundNode['y'])),
+                                'to': (int(node_x),int(node_y)),
+                                'weight': int(foundNode['weight'])
                             })
                             for point in turningPointNodes:
                                 if(int(point['point'][0])== foundNode['x']) and int(point['point'][1]) == foundNode['y']:
@@ -1396,9 +1396,9 @@ for node in centerBlock:
                             
                 if(foundNode['weight'] != 0):
                     edges.append({
-                            'from': node,
-                            'to': foundNode,
-                            'weight': foundNode['weight']
+                            'from': (int(node_x),int(node_y)),
+                            'to': (int(foundNode['x']),int(foundNode['y'])),
+                            'weight': int(foundNode['weight'])
                         })
                     for horExt in horizontalExtensionNodes:
                         if(horExt['x'] == foundNode['x']) and (horExt['y'] == foundNode['y']):
@@ -1438,9 +1438,9 @@ for node in centerBlock:
                             
                 if(foundNode['weight'] != 0):
                     edges.append({
-                            'from': node,
-                            'to': foundNode,
-                            'weight': foundNode['weight']
+                            'from': (int(node_x),int(node_y)),
+                            'to': (int(foundNode['x']),int(foundNode['y'])),
+                            'weight': int(foundNode['weight'])
                         })
                     for horExt in horizontalExtensionNodes:
                             if(horExt['x'] == foundNode['x']) and (horExt['y'] == foundNode['y']):
@@ -1470,9 +1470,9 @@ for node in centerBlock:
                     
                 if(foundNode['weight'] != 0):
                     edges.append({
-                            'from': foundNode,
-                            'to': node,
-                            'weight': foundNode['weight']
+                            'from': (int(foundNode['x']),int(foundNode['y'])),
+                            'to': (int(node_x),int(node_y)),
+                            'weight': int(foundNode['weight'])
                         })
                     for horExt in horizontalExtensionNodes:
                             if(horExt['x'] == foundNode['x']) and (horExt['y'] == foundNode['y']):
@@ -1512,9 +1512,9 @@ for node in centerBlock:
                         marked = markPoint(foundNode['x'],foundNode['y'],turningPointNodes,node_x,node_y,'to')
                         if(marked):
                             edges.append({
-                                'from': foundNode,
-                                'to': node,
-                                'weight': foundNode['weight']
+                                'from': (int(foundNode['x']),int(foundNode['y'])),
+                                'to': (int(node_x),int(node_y)),
+                                'weight': int(foundNode['weight']) 
                             })
                             for point in turningPointNodes:
                                 if(int(point['point'][0]) ==foundNode['x']) and int(point['point'][1] == foundNode['y']):
@@ -1588,9 +1588,9 @@ for verExt in verticalExtensionNodes:
             marked = markPoint(foundNode['x'],foundNode['y'],turningPointNodes,verExt_x,verExt_y,'from')
             if(marked):#foundnodewiehgt = 0
                 edges.append({
-                    'from': verExt,
-                    'to': foundNode,
-                    'weight': foundNode['weight']
+                    'from': (int(verExt_x),int(verExt_y)),
+                    'to': (int(foundNode['x']),int(foundNode['y'])),
+                    'weight': int(foundNode['weight'])
                 })
                 for point in turningPointNodes:
                     if(int(point['point'][0]) ==foundNode['x']) and int(point['point'][1]) == foundNode['y']:
@@ -1637,9 +1637,9 @@ for verExt in verticalExtensionNodes:
             marked = markPoint(foundNode['x'],foundNode['y'],turningPointNodes,verExt_x,verExt_y,'from')
             if(marked):
                 edges.append({
-                    'from': verExt,
-                    'to': foundNode,
-                    'weight': foundNode['weight']
+                    'from': (int(verExt_x),int(verExt_y)),
+                    'to': (int(foundNode['x']),int(foundNode['y'])),
+                    'weight': int(foundNode['weight'])
                 })
                 for point in turningPointNodes:
                     if(int(point['point'][0]) ==foundNode['x']) and int(point['point'][1]) == foundNode['y']:
@@ -1687,9 +1687,9 @@ for horExt in horizontalExtensionNodes:
             if(marked):
                 #cv2.circle(result,(foundNode['x'],foundNode['y']),dotRadius + 20, (0,0,255),1)
                 edges.append({
-                    'from': horExt,
-                    'to': foundNode,
-                    'weight': foundNode['weight']
+                    'from': (int(horExt_x),int(horExt_y)),
+                    'to': (int(foundNode['x']),int(foundNode['y'])),
+                    'weight': int(foundNode['weight'])
                 })
                 for point in turningPointNodes:
                     if(int(point['point'][0]) ==foundNode['x']) and int(point['point'][1] == foundNode['y']):
@@ -1734,9 +1734,9 @@ for horExt in horizontalExtensionNodes:
             marked = markPoint(foundNode['x'],foundNode['y'],turningPointNodes,horExt_x,horExt_y,'from')
             if(marked):
                 edges.append({
-                    'from': horExt,
-                    'to': foundNode,
-                    'weight': foundNode['weight']
+                    'from': (int(horExt_x),int(horExt_y)),
+                    'to': (int(foundNode['x']),int(foundNode['y'])),
+                    'weight': int(foundNode['weight'])
                 })
                 for point in turningPointNodes:
                     if(int(point['point'][0]) ==foundNode['x']) and int(point['point'][1] == foundNode['y']):
@@ -1835,18 +1835,18 @@ for i, node in enumerate(turningPointNodes):
                     if(marked):
                         if(directionCheck[j] != 'from'): #from = (0,0)
                             edges.append({
-                                'from': foundNode,
-                                'to': node,
-                                'weight': foundNode['weight']
+                                'from': (int(foundNode['x']),int(foundNode['y'])),
+                                'to': (int(node_x),int(node_y)),
+                                'weight': int(foundNode['weight'])
                             })
                             node['from'] = (foundNode['x'],foundNode['y'])
                             draw_arrow_with_weight(result,(foundNode['x'],foundNode['y']),(node_x,node_y),foundNode['weight'],(0,255,0),1)
                             foundNode['weight'] = 0
                         elif(directionCheck[j] != 'to'):
                             edges.append({
-                                'from': node,
-                                'to': foundNode,
-                                'weight': foundNode['weight']
+                                'from': (int(node_x),int(node_y)),
+                                'to': (int(foundNode['x']),int(foundNode['y'])),
+                                'weight': int(foundNode['weight'])
                             })
                             node['to'] = (foundNode['x'],foundNode['y'])
                             draw_arrow_with_weight(result,(node_x,node_y),(foundNode['x'],foundNode['y']),foundNode['weight'],(0,255,0),1)
@@ -1890,9 +1890,9 @@ for i, node in enumerate(turningPointNodes):
                     if(marked):
                         if(directionCheck[j] != 'from'): #from = (0,0)
                             edges.append({
-                                'from': foundNode,
-                                'to': node,
-                                'weight': foundNode['weight']
+                                'from': (int(foundNode['x']),int(foundNode['y'])),
+                                'to': (int(node_x),int(node_y)),
+                                'weight': int(foundNode['weight'])
                             })
                             node['from'] = (foundNode['x'],foundNode['y'])
                             print("drawn from")
@@ -1900,9 +1900,9 @@ for i, node in enumerate(turningPointNodes):
                             foundNode['weight'] = 0
                         elif(directionCheck[j] != 'to'):
                             edges.append({
-                                'from': node,
-                                'to': foundNode,
-                                'weight': foundNode['weight']
+                                'from': (int(node_x),int(node_y)),
+                                'to': (int(foundNode['x']),int(foundNode['y'])),
+                                'weight': int(foundNode['weight'])
                             })
                             node['to'] = (foundNode['x'],foundNode['y'])
                             print("drawn to")
@@ -1912,8 +1912,26 @@ for i, node in enumerate(turningPointNodes):
                 foundNode['weight'] = 0
 
 
-for node in centerBlock:
-    roads.add(node['road'])
+edgeData = []
+for edge in edges:
+    edgeData.append(edge)
+
+def convert_tuples(obj):
+    if isinstance(obj, tuple):
+        return list(obj)
+    if isinstance(obj, list):
+        return [convert_tuples(x) for x in obj]
+    if isinstance(obj, dict):
+        return {k: convert_tuples(v) for k, v in obj.items()}
+    return obj
+
+edgeData = convert_tuples(edgeData)
+
+import json
+with open("graph.json", "w") as f:
+    json.dump(edgeData, f, indent=4)
+
+
 
 ("cropped.jpg", cropped)
 cv2.imwrite("nodes.jpg", result)
@@ -1929,6 +1947,9 @@ print(f"✓ Number of turning points Nodes: {len(turningPointNodes)}")
 print(f"✓ Number of Roads: {len(roads)}")
 print(f"✓ Number of visitedVBlocks: {len(visitedBlocks)}")
 print(f"✓ Number of Intersections: {len(intersectionNodes)}")
+for edge in edges:
+    print(edge)
+print(len(edges))
 
 
 
