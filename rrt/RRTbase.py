@@ -204,6 +204,27 @@ class RRTGraph:
             x,y = (self.x[node], self.y[node])
             pathCoords.append((x,y))
         return pathCoords
+    
+    def waypoints2path(self):
+        oldPath = self.getPathCoords()
+        path = []
+
+        for i in range(0, len(oldPath)-1):
+            print(i)
+            if i >= len(oldPath):
+                break
+            (x1, y1) = oldPath[i]
+            (x2, y2) = oldPath[i+1]
+            print("--------------------")
+            print((x1, y1), (x2, y2))
+            for j in range(0, 5):
+                u = j / 5
+                x = x1 * u + x2 * (1 - u)
+                y = y1 * u + y2 * (1 - u)
+                path.append((x, y))
+                print((x, y))
+        
+        return path
 
     def bias(self, ngoal):
         n = self.numberOfNodes()
