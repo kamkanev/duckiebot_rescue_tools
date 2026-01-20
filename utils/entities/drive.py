@@ -52,6 +52,13 @@ class Robot:
         self.vl = self.speed * self.m2p
         self.vr = self.speed * self.m2p
 
+        self.u = self.speed * self.m2p # linear velocity
+        self.W = 0 # angular velocity
+
+        self.a = 0.1 * self.m2p  # look-ahead distance in pixels (0.1 meters)
+        self.path = []  # list of (x, y) waypoints in pixels
+        self.waypoint = 0
+
         self.MAXSPEED = 0.03 * self.m2p
         self.MINSPEED = -0.03 * self.m2p
 
@@ -101,11 +108,34 @@ class Robot:
         self.vl = max(self.vl, self.MINSPEED)
 
 
-        self.rotated = pygame.transform.rotate(self.img, math.degrees(self.theta))
+        self.rotated = pygame.transform.rotozoom(self.img, math.degrees(self.theta), 1)
         self.rect = self.rotated.get_rect(center=(self.x, self.y))
+
+    def move_without_event(self):
+        self.x += (self.u * math.cos(self.theta) - self.a * math.sin(self.theta) * self.W) * dt
+        self.y += (self.u * math.sin(self.theta) + self.a * math.cos(self.theta) * self.W) * dt
+        self.theta += self.W * dt
+        self.rotated = pygame.transform.rotozoom(self.img, math.degrees(self.theta), 1)
+        self.rect = self.rotated.get_rect(center=(self.x, self.y))
+        self.follow_path()
+    
+    def follow_path(self):
+        target =self.path[self.waypoint]
+        delta_x = target[0] - self.x
+        delta_y = target[1] - self.y
+        self.u = delta_x * math.cos(self.theta) + delta_y * math.sin(self.theta)
+        self.W = (-1 / self.a) * math.sin(self.theta) * delta_x + (1 / self.a) * math.cos(self.theta) * delta_y
+
+        if self.dist((self.x, self.y), target) <= 35:
+            self.waypoint -= 1
+            if self.waypoint < 0:
+                self.waypoint = 0
 
     def draw(self, map):
         map.blit(self.rotated, self.rect)
+        
+    def dist(self, p1, p2):
+        return math.hypot(p1[0] - p2[0], p1[1] - p2[1])
         
 
 #init
