@@ -48,19 +48,20 @@ class Robot:
         self.x = start_pos[0]
         self.y = start_pos[1]
         self.theta = 0
-        self.speed = 0.01
+        self.speed = 0.5
         self.vl = self.speed * self.m2p
         self.vr = self.speed * self.m2p
 
         self.u = self.speed * self.m2p # linear velocity
-        self.W = 0 # angular velocity
+        self.W = 0.5 # angular velocity
 
-        self.a = 0.1 * self.m2p  # look-ahead distance in pixels (0.1 meters)
+        self.a = 0.001 * self.m2p  # look-ahead distance in pixels (0.1 meters)
         self.path = []  # list of (x, y) waypoints in pixels
         self.waypoint = 0
+        self.dt = 0  # time delta
 
-        self.MAXSPEED = 0.03 * self.m2p
-        self.MINSPEED = -0.03 * self.m2p
+        self.MAXSPEED = 0.9 * self.m2p
+        self.MINSPEED = -0.9 * self.m2p
 
         self.img = pygame.image.load(robotimg)
         self.rotated = self.img
@@ -95,9 +96,9 @@ class Robot:
                     self.vl = 0
                     self.vr = 0
         
-        self.x += ((self.vl + self.vr) / 2) * math.cos(self.theta) * dt
-        self.y -= ((self.vl + self.vr) / 2) * math.sin(self.theta) * dt
-        self.theta += (self.vr - self.vl) / self.w * dt
+        self.x += ((self.vl + self.vr) / 2) * math.cos(self.theta) * self.dt
+        self.y -= ((self.vl + self.vr) / 2) * math.sin(self.theta) * self.dt
+        self.theta += (self.vr - self.vl) / self.w * self.dt
         if self.theta > 2 * math.pi or self.theta < -2 * math.pi:
             self.theta = 0
         
@@ -112,9 +113,9 @@ class Robot:
         self.rect = self.rotated.get_rect(center=(self.x, self.y))
 
     def move_without_event(self):
-        self.x += (self.u * math.cos(self.theta) - self.a * math.sin(self.theta) * self.W) * dt
-        self.y += (self.u * math.sin(self.theta) + self.a * math.cos(self.theta) * self.W) * dt
-        self.theta += self.W * dt
+        self.x += (self.u * math.cos(self.theta) - self.a * math.sin(self.theta) * self.W) * self.dt
+        self.y += (self.u * math.sin(self.theta) + self.a * math.cos(self.theta) * self.W) * self.dt
+        self.theta += self.W * self.dt
         self.rotated = pygame.transform.rotozoom(self.img, math.degrees(self.theta), 1)
         self.rect = self.rotated.get_rect(center=(self.x, self.y))
         self.follow_path()
@@ -126,6 +127,12 @@ class Robot:
         self.u = delta_x * math.cos(self.theta) + delta_y * math.sin(self.theta)
         self.W = (-1 / self.a) * math.sin(self.theta) * delta_x + (1 / self.a) * math.cos(self.theta) * delta_y
 
+        print(f"U: {self.u/37.7952:.2f} m/s | W: {math.degrees(self.W):.2f} deg/s")
+        print(f"vl: {self.vl/37.7952:.2f} m/s | vr: {self.vr/37.7952:.2f} m/s")
+        avg_speed = (self.vl + self.vr) / 2
+        avg_angular = (self.vr - self.vl) / self.w
+        print(f"Avg speed: {avg_speed/37.7952:.2f} m/s | Avg angular: {math.degrees(avg_angular):.2f} deg/s")
+        print("--------------------------------------------------------------------")
         if self.dist((self.x, self.y), target) <= 35:
             self.waypoint -= 1
             if self.waypoint < 0:
@@ -138,43 +145,43 @@ class Robot:
         return math.hypot(p1[0] - p2[0], p1[1] - p2[1])
         
 
-#init
-pygame.init()
+# #init
+# pygame.init()
 
-start = (200, 200)
+# start = (200, 200)
 
-dims = (800, 1200)
+# dims = (800, 1200)
 
-env = Enviroment(dims)
-robot = Robot(start, 'utils/entities/duck_bot.png', 0.01 * 3779.52) #0.01 meters in pixels - 1 cm width
+# env = Enviroment(dims)
+# robot = Robot(start, 'utils/entities/duck_bot.png', 0.01 * 3779.52) #0.01 meters in pixels - 1 cm width
 
-FPS = 120
-dt = 0
-lasttime = pygame.time.get_ticks()
+# FPS = 120
+# dt = 0
+# lasttime = pygame.time.get_ticks()
 
-clock = pygame.time.Clock()
+# clock = pygame.time.Clock()
 
-run = True
+# run = True
 
-while run:
-    clock.tick(FPS)
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            run = False
-        robot.move(event)
+# while run:
+#     clock.tick(FPS)
+#     for event in pygame.event.get():
+#         if event.type == pygame.QUIT:
+#             run = False
+#         robot.move(event)
 
-    dt = (pygame.time.get_ticks() - lasttime) / 1000
-    lasttime = pygame.time.get_ticks()
-    env.map.fill(env.Black)
+#     dt = (pygame.time.get_ticks() - lasttime) / 1000
+#     lasttime = pygame.time.get_ticks()
+#     env.map.fill(env.Black)
 
-    # Draw a simple representation of the robot
-    # pygame.draw.circle(env.map, env.Blue, start, 20)
-    robot.move()
-    robot.draw(env.map)
-    env.show_info(robot.vl, robot.vr, robot.theta)
-    env.robot_frame((robot.x, robot.y), robot.theta)
+#     # Draw a simple representation of the robot
+#     # pygame.draw.circle(env.map, env.Blue, start, 20)
+#     robot.move()
+#     robot.draw(env.map)
+#     env.show_info(robot.vl, robot.vr, robot.theta)
+#     env.robot_frame((robot.x, robot.y), robot.theta)
 
 
-    pygame.display.update()
+#     pygame.display.update()
 
-pygame.quit()
+# pygame.quit()
