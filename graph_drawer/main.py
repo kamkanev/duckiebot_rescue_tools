@@ -556,12 +556,12 @@ turningPoints = [
 turningPoints = reorder(turningPoints)
 
 
+#Draw TurningPoints
+# for i, point in enumerate(turningPoints):
+#     y = int(point[1])
+#     x = int(point[0])
 
-for i, point in enumerate(turningPoints):
-    y = int(point[1])
-    x = int(point[0])
-
-    cv2.circle(result,(x,y),(dotRadius),(0,0,255),-1)
+#     cv2.circle(result,(x,y),(dotRadius),(0,0,255),-1)
 
 lastTop = False
 lastDown = False
@@ -1928,8 +1928,7 @@ def convert_tuples(obj):
 edgeData = convert_tuples(edgeData)
 
 import json
-with open("graph.json", "w") as f:
-    json.dump(edgeData, f, indent=4)
+
 
 
 
@@ -1946,10 +1945,30 @@ print(f"✓ Number of yellow points: {len(yellowBlockCoord)}")
 print(f"✓ Number of turning points Nodes: {len(turningPointNodes)}")
 print(f"✓ Number of Roads: {len(roads)}")
 print(f"✓ Number of visitedVBlocks: {len(visitedBlocks)}")
-print(f"✓ Number of Intersections: {len(intersectionNodes)}")
+print(f"✓ Number of turning point nodes: {len(turningPointNodes)}")
+
+testEdge = []
+visitedEdgeCoord = []
 for edge in edges:
-    print(edge)
-print(len(edges))
+    if edge['from'] not in visitedEdgeCoord:
+        visitedEdgeCoord.append(edge['from'])
+        testEdge.append({
+            'spot': edge['from'],
+            'neighbour': [edge['to']]
+        })
+    else:
+        for tEdge in testEdge:
+            if tEdge['spot'] == edge['from']:
+                tEdge['neighbour'].append(edge['to'])
+
+testEdge = convert_tuples(testEdge)
+
+with open("neighbour.json", "w") as f:
+    json.dump(testEdge, f, indent=4)
+
+with open("graph.json", "w") as f:
+    json.dump(edgeData, f, indent=4)
+
 
 
 
