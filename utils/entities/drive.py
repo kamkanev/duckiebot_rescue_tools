@@ -48,20 +48,20 @@ class Robot:
         self.x = start_pos[0]
         self.y = start_pos[1]
         self.theta = 0
-        self.speed = 0.5
+        self.speed = 0.01
         self.vl = self.speed * self.m2p
         self.vr = self.speed * self.m2p
 
         self.u = self.speed * self.m2p # linear velocity
-        self.W = 0.5 # angular velocity
+        self.W = 0 # angular velocity
 
-        self.a = 0.001 * self.m2p  # look-ahead distance in pixels (0.1 meters)
+        self.a = 0.1 * self.m2p  # look-ahead distance in pixels (0.1 meters)
         self.path = []  # list of (x, y) waypoints in pixels
         self.waypoint = 0
-        self.dt = 0  # time delta
+        self.dt = 0.1  # time step in seconds
 
-        self.MAXSPEED = 0.9 * self.m2p
-        self.MINSPEED = -0.9 * self.m2p
+        self.MAXSPEED = 0.03 * self.m2p
+        self.MINSPEED = -0.03 * self.m2p
 
         self.img = pygame.image.load(robotimg)
         self.rotated = self.img
@@ -127,12 +127,6 @@ class Robot:
         self.u = delta_x * math.cos(self.theta) + delta_y * math.sin(self.theta)
         self.W = (-1 / self.a) * math.sin(self.theta) * delta_x + (1 / self.a) * math.cos(self.theta) * delta_y
 
-        print(f"U: {self.u/37.7952:.2f} m/s | W: {math.degrees(self.W):.2f} deg/s")
-        print(f"vl: {self.vl/37.7952:.2f} m/s | vr: {self.vr/37.7952:.2f} m/s")
-        avg_speed = (self.vl + self.vr) / 2
-        avg_angular = (self.vr - self.vl) / self.w
-        print(f"Avg speed: {avg_speed/37.7952:.2f} m/s | Avg angular: {math.degrees(avg_angular):.2f} deg/s")
-        print("--------------------------------------------------------------------")
         if self.dist((self.x, self.y), target) <= 35:
             self.waypoint -= 1
             if self.waypoint < 0:
@@ -145,7 +139,7 @@ class Robot:
         return math.hypot(p1[0] - p2[0], p1[1] - p2[1])
         
 
-# #init
+#init
 # pygame.init()
 
 # start = (200, 200)

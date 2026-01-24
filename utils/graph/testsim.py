@@ -46,8 +46,14 @@ async def send_velocity(ws, v, omega):
 async def send_velocity2(ws, vl, vr, omega):
     # Apply gains by scaling left/right wheels for differential drive
     # Assuming differential drive: v_l = v - omega, v_r = v + omega
-    v_l = (vl)
-    v_r = (vr)
+    if math.isnan(vl) or math.isinf(vl):
+        vl = 0
+    if math.isnan(vr) or math.isinf(vr):
+        vr = 0
+    if math.isnan(omega) or math.isinf(omega):
+        omega = 0
+    v_l = (vl)# * 1.13 + (-0.03)
+    v_r = (vr)# * 0.89 + (0.02)
     
     v_avg = (v_l + v_r) / 2
     omega_adj = omega #(v_r - v_l) / 2
@@ -181,8 +187,8 @@ class GraphVisualizer:
                 self.algorithm_running = False
                 self.mode = "done"
                 if self.robot and self.astar.path:
-                    self.robot.path = [(spot.position.x, spot.position.y) for spot in self.astar.path]
-                    self.robot.waypoint = len(self.robot.path) - 1
+                    self.robot.path = [(spot.position.x, spot.position.y) for spot in reversed(self.astar.path)]
+                    self.robot.waypoint = 0
     
     def draw_sidebar(self):
         """Draw left sidebar with graph selection"""
