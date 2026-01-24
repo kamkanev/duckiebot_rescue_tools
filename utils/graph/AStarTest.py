@@ -233,6 +233,7 @@ class GraphVisualizer:
                 f"Closed set: {len(self.astar.closeSet)}",
                 f"Path length: {len(self.astar.path) if self.astar.path else 0}",
                 f"Solution found: {self.astar.isDone and not self.astar.noSolution}",
+                f"Is Uturn: {self.checkforUturn(self.astar.path) if self.astar.path else 'N/A'}"
             ]
             for i, stat in enumerate(stats):
                 text = self.font.render(stat, True, BLACK)
@@ -314,6 +315,20 @@ class GraphVisualizer:
             self.algorithm_done = False
             self.mode = "running"
     
+    def is_Uturn(self, waypoint, path):
+
+        if not self.astar.noSolution and len(path) > 0:
+            if waypoint > 0 and waypoint < len(path) - 1:
+                if self.astar._distance(path[waypoint - 1], path[waypoint + 1]) < 50:
+                    return True
+        return False
+    
+    def checkforUturn(self, path):
+        for i in range(1, len(path) - 1):
+            if self.is_Uturn(i, path):
+                return True
+        return False
+
     def reset_pathfinding(self):
         """Reset pathfinding"""
         if self.graph:
