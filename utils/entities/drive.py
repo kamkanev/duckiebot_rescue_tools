@@ -48,12 +48,12 @@ class Robot:
         self.x = start_pos[0]
         self.y = start_pos[1]
         self.theta = 0
-        self.speed = 0.3
+        self.speed = 0.5
         self.vl = self.speed * self.m2p
         self.vr = self.speed * self.m2p
 
         self.u = self.speed * self.m2p # linear velocity
-        self.W = 0.5 # angular velocity
+        self.W = 0.9 # angular velocity
 
         self.a = 0.1 * self.m2p  # look-ahead distance in pixels (0.1 meters)
         self.path = []  # list of (x, y) waypoints in pixels
@@ -115,7 +115,7 @@ class Robot:
     def move_without_event(self):
         self.x += (self.u * math.cos(self.theta) - self.a * math.sin(self.theta) * self.W) * self.dt
         self.y += (self.u * math.sin(self.theta) + self.a * math.cos(self.theta) * self.W) * self.dt
-        self.theta += self.W * self.dt
+        self.theta += self.W * self.w * self.dt
         self.rotated = pygame.transform.rotozoom(self.img, math.degrees(self.theta), 1)
         self.rect = self.rotated.get_rect(center=(self.x, self.y))
         self.follow_path()
