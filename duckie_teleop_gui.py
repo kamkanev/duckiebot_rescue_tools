@@ -42,7 +42,7 @@ async def switch_lane_follow(ws, enable: bool):
     msg = {
         "op": "call_service",
         "service": LANE_FOLLOW_SWITCH,
-        "args": {"value": enable},
+        "args": {"data": enable},
     }
     await ws.send(json.dumps(msg))
 
@@ -60,6 +60,7 @@ async def lane_follow_listener(ws):
     while True:
         try:
             raw = await ws.recv()
+            print(raw)
             if isinstance(raw, bytes):
                 raw = raw.decode("utf-8", errors="ignore")
             msg = json.loads(raw)
@@ -67,6 +68,7 @@ async def lane_follow_listener(ws):
                 lane_msg = msg.get("msg", {})
                 latest_lane_cmd["v"] = lane_msg.get("v", 0.0)
                 latest_lane_cmd["omega"] = lane_msg.get("omega", 0.0)
+                print(f"Lane follow cmd: v={latest_lane_cmd['v']}, omega={latest_lane_cmd['omega']}")
         except Exception:
             await asyncio.sleep(0.01)
 
@@ -119,7 +121,7 @@ async def teleop():
                     if event.key == pygame.K_f:
                         lane_following = not lane_following
                         print("Lane following =", lane_following)
-                        # await switch_lane_follow(ws, lane_following)
+                        await switch_lane_follow(ws, lane_following)
                         
 
             # Decide which commands to send
