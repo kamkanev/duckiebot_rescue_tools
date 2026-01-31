@@ -376,6 +376,14 @@ class GraphVisualizer:
             self.algorithm_done = False
             self.mode = "running"
     
+    def is_Uturn(self, waypoint, path):
+
+        if not self.astar.noSolution and len(path) > 0:
+            if waypoint > 0 and waypoint < len(path) - 1:
+                if self.astar._distance(path[waypoint - 1], path[waypoint + 1]) < 50:
+                    return True
+        return False
+
     def reset_pathfinding(self):
         """Reset pathfinding"""
         if self.graph:
