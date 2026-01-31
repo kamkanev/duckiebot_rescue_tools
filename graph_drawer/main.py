@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import math
 
-img = cv2.imread("assets/try3.jpg", 1)
+img = cv2.imread("assets/try2.jpg", 1)
 original = img.copy()
 draw_weights = False 
 dotRadius = 6
@@ -1947,27 +1947,69 @@ print(f"✓ Number of Roads: {len(roads)}")
 print(f"✓ Number of visitedVBlocks: {len(visitedBlocks)}")
 print(f"✓ Number of turning point nodes: {len(turningPointNodes)}")
 
-testEdge = []
-visitedEdgeCoord = []
-for edge in edges:
-    if edge['from'] not in visitedEdgeCoord:
-        visitedEdgeCoord.append(edge['from'])
-        testEdge.append({
-            'spot': edge['from'],
-            'neighbour': [edge['to']]
+spots = []
+neighbours = []
+mapping = []
+visited = []
+j = 0
+for i, edge in enumerate(edges):
+    if edge['from'] not in visited:
+        visited.append(edge['from'])
+        neighbours.append([edge['to']])
+        mapping.append((edge['from'],j))
+        spots.append({
+            'x': edge['from'][0],
+            'y': edge['from'][1]
         })
+        j+=1
     else:
-        for tEdge in testEdge:
-            if tEdge['spot'] == edge['from']:
-                tEdge['neighbour'].append(edge['to'])
+        for m in mapping:
+            if m[0] == edge['from']:
+                neighbours[m[1]].append(edge['to'])
 
-testEdge = convert_tuples(testEdge)
+print("---------- spots -------------")
+for s in spots:
+    print(s)
 
-with open("neighbour.json", "w") as f:
-    json.dump(testEdge, f, indent=4)
+print("---------- neighbour -------------")
+for n in neighbours:
+    for i, x in enumerate(n):
+        for m in mapping:
+            if m[0] == x:
+                n[i] = m[1]
+    print(n)
+
+print("---------- mapping -------------")
+for m in mapping:
+    print(f"Spot: {m[0]}")
+    print(f"Index: {m[1]}")
+
+
+visited.clear()
+# for edge in edges:
+#     if edge['from'][0] != spots['x'] and edge['from'][1] != spots['y']:
+#         spots.append({
+#             "x": edge['from'][0],
+#             "y": edge['from'][1]
+#         })
+#         testEdge.append({
+#             'spot': edge['from']
+#             })
+#     else:
+
+
+# spots = convert_tuples(spots)
+# neighbours = convert_tuples(neighbours)
+data = {
+    'spots': spots,
+    'neighbours': neighbours
+}
 
 with open("graph.json", "w") as f:
-    json.dump(edgeData, f, indent=4)
+    json.dump(data, f, indent=4)
+
+# with open("graph.json", "w") as f:
+#     json.dump(edgeData, f, indent=4)
 
 
 
