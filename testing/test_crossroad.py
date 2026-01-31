@@ -11,8 +11,15 @@ BOT = sys.argv[1] if len(sys.argv) > 1 else "entebot208"
 WS_URL = f"ws://{BOT}.local:9001/ros_api"
 CAMERA_TOPIC = f"/{BOT}/camera_node/image/compressed"
 
+def observingBox(x_pos, y_pos, mask):
+    for x in range(x_pos, x_pos + 246):
+        for y in range(y_pos, y_pos + 28):
+            if mask[y, x] != 0:
+                return True
+    return False
 
 async def main():
+    is_stopped = False
     async with websockets.connect(WS_URL) as ws:
         await ws.send(json.dumps({"op": "subscribe", "topic": CAMERA_TOPIC}))
         while True:
@@ -32,6 +39,17 @@ async def main():
 
                     #checking for red recttangle
                     cv2.rectangle(img,(204,400),(450,428),(0,255,0),3)
+
+                    if not is_stopped:
+                        if observingBox(204, 400, mask1):
+                            is_stopped = True
+                        else:
+                            print("Moving forward")
+                    else:
+                        print("Stopped at crossroad")
+                        asyncio.sleep(1)
+                        is_stopped = False
+                        #TODO: implement wait and turn logic here
 
                     cv2.imshow("frame", img)
                     cv2.imshow("mask", mask1)
