@@ -172,6 +172,9 @@ class RRTGraph:
     def step(self, nnear, nrand, dmax = 35):
         d = self.distance(nnear, nrand)
         if d > dmax:
+            if d == 0:
+                self.removeNode(nrand)
+                return
             u = dmax / d
             (xnear, ynear) = (self.x[nnear], self.y[nnear])
             (xrand, yrand) = (self.x[nrand], self.y[nrand])

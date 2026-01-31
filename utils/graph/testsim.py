@@ -3,6 +3,8 @@ import json
 import os
 import sys
 import math
+import asyncio
+import websockets
 
 # Ensure project root is on sys.path
 repo_root = os.path.normpath(os.path.join(os.path.dirname(__file__), '../..'))
@@ -10,7 +12,53 @@ if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
 
 from utils.graph.AStar import Spot, AStarGraph, AStar
+from mapeditor.button import Button
+from utils.entities.drive import Enviroment, Robot
 
+BOT = sys.argv[1] if len(sys.argv) > 1 else "entebot208"
+WS_URL = f"ws://{BOT}.local:9001/ros_api"
+
+BASE_SPEED = 0.2
+ANGULAR_SPEED = 0.5
+GAIN_STEP = 0.01  # how much to change per key press
+
+TOPIC = f"/{BOT}/car_cmd_switch_node/cmd"
+# -----------------------------
+# Send velocity over WebSocket
+# -----------------------------
+async def send_velocity(ws, v, omega):
+    # Apply gains by scaling left/right wheels for differential drive
+    # Assuming differential drive: v_l = v - omega, v_r = v + omega
+    v_l = (v - omega)
+    v_r = (v + omega)
+    
+    v_avg = (v_l + v_r) / 2
+    omega_adj = (v_r - v_l) / 2
+
+    print(f"Sending velocities => v: {v_avg:.2f}, omega: {omega_adj:.2f}")
+    msg = {
+        "op": "publish",
+        "topic": TOPIC,
+        "msg": {"v": v_avg, "omega": omega_adj}
+    }
+    await ws.send(json.dumps(msg))
+
+async def send_velocity2(ws, vl, vr, omega):
+    # Apply gains by scaling left/right wheels for differential drive
+    # Assuming differential drive: v_l = v - omega, v_r = v + omega
+    v_l = (vl)# * 1.13 + (-0.03)
+    v_r = (vr)# * 0.89 + (0.02)
+    
+    v_avg = (v_l + v_r) / 2
+    omega_adj = omega #(v_r - v_l) / 2
+
+    print(f"Sending velocities => v: {v_avg:.2f}, omega: {omega_adj:.2f}")
+    msg = {
+        "op": "publish",
+        "topic": TOPIC,
+        "msg": {"v": v_avg, "omega": omega_adj}
+    }
+    await ws.send(json.dumps(msg))
 # Initialize pygame
 pygame.init()
 
@@ -52,6 +100,11 @@ class GraphVisualizer:
         self.is_running = True
         self.algorithm_running = False
         self.algorithm_done = False
+        
+        # Robot
+        self.robot = None
+        self.dt = 0
+        self.last_time = pygame.time.get_ticks()
         
         # UI state
         self.list_scroll = 0
@@ -99,6 +152,7 @@ class GraphVisualizer:
             
             self.start_spot = None
             self.end_spot = None
+            self.robot = None
             self.astar = None
             self.algorithm_running = False
             self.algorithm_done = False
@@ -126,6 +180,9 @@ class GraphVisualizer:
                 self.algorithm_done = True
                 self.algorithm_running = False
                 self.mode = "done"
+                if self.robot and self.astar.path:
+                    self.robot.path = [(spot.position.x, spot.position.y) for spot in self.astar.path]
+                    self.robot.waypoint = len(self.robot.path) - 1
     
     def draw_sidebar(self):
         """Draw left sidebar with graph selection"""
@@ -203,6 +260,10 @@ class GraphVisualizer:
         if self.astar:
             self.astar.debugDraw(self.screen)
         
+        # Draw robot
+        if self.robot:
+            self.robot.draw(self.screen)
+        
         # Draw instructions
         instructions_y = 20
         if self.mode == "select_start":
@@ -233,7 +294,6 @@ class GraphVisualizer:
                 f"Closed set: {len(self.astar.closeSet)}",
                 f"Path length: {len(self.astar.path) if self.astar.path else 0}",
                 f"Solution found: {self.astar.isDone and not self.astar.noSolution}",
-                f"Is Uturn: {self.checkforUturn(self.astar.path) if self.astar.path else 'N/A'}"
             ]
             for i, stat in enumerate(stats):
                 text = self.font.render(stat, True, BLACK)
@@ -299,6 +359,7 @@ class GraphVisualizer:
                             if spot:
                                 if self.mode == "select_start":
                                     self.start_spot = spot
+                                    self.robot = Robot((spot.position.x, spot.position.y), 'utils/entities/duck_bot.png', 0.3 * 3779.52)
                                     self.mode = "select_end"
                                 elif self.mode == "select_end":
                                     self.end_spot = spot
@@ -322,12 +383,6 @@ class GraphVisualizer:
                 if self.astar._distance(path[waypoint - 1], path[waypoint + 1]) < 50:
                     return True
         return False
-    
-    def checkforUturn(self, path):
-        for i in range(1, len(path) - 1):
-            if self.is_Uturn(i, path):
-                return True
-        return False
 
     def reset_pathfinding(self):
         """Reset pathfinding"""
@@ -336,31 +391,55 @@ class GraphVisualizer:
         self.astar = None
         self.start_spot = None
         self.end_spot = None
+        self.robot = None
         self.algorithm_running = False
         self.algorithm_done = False
         self.mode = "select_start"
     
-    def run(self):
+    async def run(self):
         """Main loop"""
-        while self.is_running:
-            self.handle_events()
-            
-            # Update A* if running
-            if self.algorithm_running:
-                self.run_astar_step()
-            
-            # Draw
-            self.screen.fill(WHITE)
-            self.draw_sidebar()
-            self.draw_canvas()
-            self.draw_controls()
-            
-            pygame.display.flip()
-            self.clock.tick(FPS)
-        
-        pygame.quit()
+        try:
+            async with websockets.connect(WS_URL) as ws:
+                clock = pygame.time.Clock()
+                running = True
+                while self.is_running:
+                    self.handle_events()
+                    
+                    # Update time
+                    current_time = pygame.time.get_ticks()
+                    self.dt = (current_time - self.last_time) / 1000.0
+                    self.last_time = current_time
+                    
+                    # Update A* if running
+                    if self.algorithm_running:
+                        self.run_astar_step()
+                    
+                    # Update robot
+                    if self.robot and self.robot.path:
+                        self.robot.dt = self.dt
+                        self.robot.move_without_event()
+                        # Send velocity commands
+                        v = self.robot.u / self.robot.m2p  # convert to m/s
+                        omega = -self.robot.W
+                        # await send_velocity(ws, v, omega)
+                        await send_velocity2(ws, self.robot.vl / self.robot.m2p, self.robot.vr / self.robot.m2p, omega)
+                    
+                    # Draw
+                    self.screen.fill(WHITE)
+                    self.draw_sidebar()
+                    self.draw_canvas()
+                    self.draw_controls()
+                    
+                    pygame.display.flip()
+                    self.clock.tick(FPS)
+                
+                # stop robot on exit
+                await send_velocity(ws, 0.0, 0.0)
+                pygame.quit()
+        except Exception as e:
+            print("Error:", e)
 
 
 if __name__ == "__main__":
     visualizer = GraphVisualizer()
-    visualizer.run()
+    asyncio.run(visualizer.run())
