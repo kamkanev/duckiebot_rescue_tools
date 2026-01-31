@@ -29,7 +29,8 @@ async def main():
 
                     result = cv2.bitwise_and(img, img, mask=mask1)
 
-                    cv2.rectangle(img,(384,0),(510,128),(0,255,0),3)
+                    #checking for red recttangle
+                    cv2.rectangle(img,(204,400),(450,428),(0,255,0),3)
 
                     cv2.imshow("frame", img)
                     cv2.imshow("mask", mask1)
