@@ -852,8 +852,8 @@ for i, block in enumerate(verticalBlocks):
                 'height': h
             })
 
-    cv2.circle(result, (center_x, new_y), dotRadius, (255, 0, 0), -1) 
-    print(f"Block V{i+1}: Added TOP node at ({center_x}, {new_y})")
+        cv2.circle(result, (center_x, new_y), dotRadius, (255, 0, 0), -1) 
+        print(f"Block V{i+1}: Added TOP node at ({center_x}, {new_y})")
     
     # Check bottom side - search area below bottom edge
     if is_yellow_in_area(center_x, y_max, w, h, 'bottom'):
@@ -900,8 +900,8 @@ for i, block in enumerate(verticalBlocks):
                 'height': h
             })
 
-    cv2.circle(result, (center_x, new_y), dotRadius, (255, 0, 0), -1)  
-    print(f"Block V{i+1}: Added BOTTOM node at ({center_x}, {new_y})")
+        cv2.circle(result, (center_x, new_y), dotRadius, (255, 0, 0), -1)  
+        print(f"Block V{i+1}: Added BOTTOM node at ({center_x}, {new_y})")
 
 #Testing
 # NEW CODE: Create edges from intersection nodes
