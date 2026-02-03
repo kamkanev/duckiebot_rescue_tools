@@ -246,8 +246,8 @@ class GraphVisualizer:
                 f"Open set: {len(self.astar.openSet)}",
                 f"Closed set: {len(self.astar.closeSet)}",
                 f"Path length: {len(self.astar.path) if self.astar.path else 0}",
-                f"Solution found: {self.astar.isDone and not self.astar.noSolution}",
-                f"Is Uturn: {self.checkforUturn(self.astar.path) if self.astar.path else 'N/A'}"
+                f"Solution found: {self.astar.isDone and not self.astar.noSolution}"
+                # f"Is Uturn: {self.checkforUturn(self.astar.path) if self.astar.path else 'N/A'}"
             ]
             for i, stat in enumerate(stats):
                 text = self.font.render(stat, True, BLACK)
@@ -366,6 +366,8 @@ class GraphVisualizer:
         nx = n.position.x - cur.position.x
         ny = n.position.y - cur.position.y
 
+        print(f"Distance: {self.astar._distance(nxt, n)}")
+
         # cross product (z component) tells left/right relative to forward vector
         cross = fx * ny - fy * nx
 
@@ -399,8 +401,13 @@ class GraphVisualizer:
 
         if not self.astar.noSolution and len(path) > 0:
             if waypoint > 0 and waypoint < len(path) - 1:
-                if self.astar._distance(path[waypoint - 1], path[waypoint + 1]) < 50:
+                print("DEBUG: Checking U-turn at waypoint", waypoint)
+                print("----------------------------------")
+                print(f"Distance: {self.astar._distance(path[waypoint - 1], path[waypoint + 1])}")
+                if self.astar._distance(path[waypoint - 1], path[waypoint + 1]) < 30:
+                    print("U turn true")
                     return True
+            
         return False
     
     def checkforUturn(self, path):
