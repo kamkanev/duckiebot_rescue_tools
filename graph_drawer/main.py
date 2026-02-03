@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import math
 
-img = cv2.imread("assets/try2.jpg", 1)
+img = cv2.imread("assets/try5.jpg", 1)
 original = img.copy()
 draw_weights = False 
 dotRadius = 6
@@ -1948,14 +1948,14 @@ print(f"✓ Number of visitedVBlocks: {len(visitedBlocks)}")
 print(f"✓ Number of turning point nodes: {len(turningPointNodes)}")
 
 spots = []
-neighbours = []
+neighbors = []
 mapping = []
 visited = []
 j = 0
 for i, edge in enumerate(edges):
     if edge['from'] not in visited:
         visited.append(edge['from'])
-        neighbours.append([edge['to']])
+        neighbors.append([edge['to']])
         mapping.append((edge['from'],j))
         spots.append({
             'x': edge['from'][0],
@@ -1965,14 +1965,14 @@ for i, edge in enumerate(edges):
     else:
         for m in mapping:
             if m[0] == edge['from']:
-                neighbours[m[1]].append(edge['to'])
+                neighbors[m[1]].append(edge['to'])
 
 print("---------- spots -------------")
 for s in spots:
     print(s)
 
 print("---------- neighbour -------------")
-for n in neighbours:
+for n in neighbors:
     for i, x in enumerate(n):
         for m in mapping:
             if m[0] == x:
@@ -2002,7 +2002,7 @@ visited.clear()
 # neighbours = convert_tuples(neighbours)
 data = {
     'spots': spots,
-    'neighbours': neighbours
+    'neighbors': neighbors
 }
 
 with open("graph.json", "w") as f:
