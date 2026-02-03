@@ -27,7 +27,7 @@ TURN = 0.7
 2 - left
 3 - u-turn
 """
-turn_array = [2, 0, 0, 3]
+turn_array = []
 
 def load_turns_from_file(filepath):
     """

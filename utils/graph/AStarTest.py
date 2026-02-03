@@ -167,8 +167,8 @@ class GraphVisualizer:
                 if not self.astar.noSolution and self.astar.path:
                     self.crossroads = self.get_all_crossroads(self.astar.path)
                     self.turn_array = self.get_all_turns(self.crossroads, self.astar.path)
-                    # for i, turn in enumerate(self.turn_array):
-                    #     print(f"Turn {i}: {turn}")
+                    for i, turn in enumerate(self.turn_array):
+                        print(f"Turn {i}: {turn}")
                     self.save_turns_to_file()
 
     
