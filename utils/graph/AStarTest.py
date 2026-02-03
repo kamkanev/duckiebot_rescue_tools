@@ -56,6 +56,9 @@ class GraphVisualizer:
         # UI state
         self.list_scroll = 0
         self.mode = "select_graph"  # select_graph, select_start, select_end, running, done
+
+        self.crossroads = []
+        self.turn_array = []
         
     def _get_available_graphs(self):
         """Get list of available saved graphs"""
@@ -126,6 +129,12 @@ class GraphVisualizer:
                 self.algorithm_done = True
                 self.algorithm_running = False
                 self.mode = "done"
+                if not self.astar.noSolution and self.astar.path:
+                    self.crossroads = self.get_all_crossroads(self.astar.path)
+                    self.turn_array = self.get_all_turns(self.crossroads, self.astar.path)
+                    for i, turn in enumerate(self.turn_array):
+                        print(f"Turn {i}: {turn}")
+                    #TODO: set the turn array
     
     def draw_sidebar(self):
         """Draw left sidebar with graph selection"""
@@ -202,6 +211,11 @@ class GraphVisualizer:
         # Draw A* visualization
         if self.astar:
             self.astar.debugDraw(self.screen)
+            if not self.astar.noSolution and self.astar.path:
+                if len(self.crossroads) > 0:
+                    for p in self.crossroads:
+                        if p < len(self.astar.path):
+                            pygame.draw.circle(self.screen, ORANGE, self.astar.path[p].position, self.astar.path[p].size + 5, 2)
         
         # Draw instructions
         instructions_y = 20
@@ -315,6 +329,72 @@ class GraphVisualizer:
             self.algorithm_done = False
             self.mode = "running"
     
+    def is_crossroad(self, waypoint, path):
+        return len(path[waypoint].neighbors) > 2
+    
+    def get_all_crossroads(self, path):
+        crossroads = []
+        for i in range(len(path)):
+            if self.is_crossroad(i, path):
+                crossroads.append(i)
+        return crossroads
+
+    def get_all_turns(self, crossroads, path):
+        turn_array = []
+        for wp in crossroads:
+            turn_type = self.print_directions(wp, path)
+            turn_array.append(turn_type)
+        return turn_array
+
+    def print_directions(self, waypoint, path):
+        # Guard: need a next waypoint to compare against
+        if waypoint < 0 or waypoint >= len(path) - 1:
+            return
+
+        cur = path[waypoint]
+        nxt = path[waypoint + 1]
+
+        # forward vector from current waypoint to next waypoint
+        fx = nxt.position.x - cur.position.x
+        fy = nxt.position.y - cur.position.y
+
+        print("Next waypoint at ({}, {})".format(nxt.position.x, nxt.position.y))
+        print(f"Forward vector: ({fx}, {fy})")
+
+        n = path[waypoint-1]
+        # vector from current waypoint to this neighbor
+        nx = n.position.x - cur.position.x
+        ny = n.position.y - cur.position.y
+
+        # cross product (z component) tells left/right relative to forward vector
+        cross = fx * ny - fy * nx
+
+        # compute signed angle (degrees) between forward and neighbor vector
+        ang = math.degrees(math.atan2(ny, nx) - math.atan2(fy, fx))
+        ang = (ang + 180) % 360 - 180  # normalize to [-180, 180]
+
+        if abs(ang) < 30:
+            rel = "ahead"
+            return 1
+        elif ang > 0:
+            rel = "left"
+            if self.is_Uturn(waypoint, path):
+                rel = "U-turn"
+                return 3
+            else:
+                return 2
+        else:
+            rel = "ahead"
+            if self.is_Uturn(waypoint, path):
+                rel = "right"
+                return 0
+            else:
+                return 1
+
+        # print(f"Neighbor at ({n.position.x}, {n.position.y}) -> {rel} (angle {ang:.1f}°, cross {cross:.1f})")
+            
+            
+
     def is_Uturn(self, waypoint, path):
 
         if not self.astar.noSolution and len(path) > 0:
@@ -348,7 +428,7 @@ class GraphVisualizer:
             # Update A* if running
             if self.algorithm_running:
                 self.run_astar_step()
-            
+
             # Draw
             self.screen.fill(WHITE)
             self.draw_sidebar()

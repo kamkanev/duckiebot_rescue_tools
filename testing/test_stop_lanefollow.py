@@ -21,6 +21,14 @@ LANE_FOLLOW_SWITCH = f"/{BOT}/lane_controller_node/switch"
 SPEED = 0.5
 TURN = 0.7
 
+"""
+0 - right
+1 - forward
+2 - left
+3 - u-turn
+"""
+turn_array = [2, 0, 3, 3]
+
 # Toggle
 lane_following = True
 is_stopped = False
@@ -82,9 +90,11 @@ def observingBox(x_pos, y_pos, mask):
                 return True
     return False
 
+
 async def main():
     global is_stopped
     global lane_following
+    global turn_array
     async with websockets.connect(WS_URL) as ws:
         asyncio.create_task(lane_follow_listener())
         await ws.send(json.dumps({"op": "subscribe", "topic": CAMERA_TOPIC}))
@@ -107,15 +117,16 @@ async def main():
                     # result = cv2.bitwise_and(img, img, mask=mask1)
 
                     #checking for red recttangle
-                    cv2.rectangle(img,(304,400),(404,428),(0,255,0),3)
+                    cv2.rectangle(img,(304,420),(404,448),(0,255,0),3)
 
                     if not is_stopped:
-                        if observingBox(304, 400, mask1):
-                            is_stopped = True
-                            lane_following = not lane_following
-                            print("Lane following =", lane_following)
-                            await switch_lane_follow(ws, lane_following)
-                            last_stop = time.time()
+                        if len(turn_array) != 0:
+                            if observingBox(304, 420, mask1):
+                                is_stopped = True
+                                lane_following = not lane_following
+                                print("Lane following =", lane_following)
+                                await switch_lane_follow(ws, lane_following)
+                                last_stop = time.time()
                         else:
                             print("Moving forward")
                     else:
@@ -124,33 +135,52 @@ async def main():
                             if time.time() - last_stop < 2:
                                 await send_cmd(ws, MANUAL_CMD_TOPIC, 0, 0)
                                 # last_stop = time.time()
-                            elif time.time() - last_stop < 2 + 1.5:
-                                #LEFT turn - 4 seconds added
-                                # -----------------------------------
-                                #await send_cmd(ws, MANUAL_CMD_TOPIC, 0.1, 1.3)
-                                #RIGHT turn - 3 seconds added
-                                # -----------------------------------
-                                # await send_cmd(ws, MANUAL_CMD_TOPIC, 0.1, -1.75)
-                                #U turn - mirror right for 1.5 - 3 seconds added
-                                # -----------------------------------
-                                await send_cmd(ws, MANUAL_CMD_TOPIC, 0.1, 1.75)
-                                # await asyncio.sleep(0.01)
-                                # await send_cmd(ws, MANUAL_CMD_TOPIC, SPEED , TURN + 0.2)
-                            elif time.time() - last_stop < 2 + 3:
-                                #U turn - mirror right for 1.5 - 3 seconds added
-                                # -----------------------------------
-                                await send_cmd(ws, MANUAL_CMD_TOPIC, 0.1, 2)
-                            elif time.time() - last_stop < 7:
-                                is_stopped = False
-                                lane_following = not lane_following
-                                print("Lane following =", lane_following)
-                                await switch_lane_follow(ws, lane_following)
+                            else:
+                                turn_type = turn_array[0]
+                                match turn_type:
+                                    case 0:
+                                        if time.time() - last_stop < 2 + 3:
+                                            await send_cmd(ws, MANUAL_CMD_TOPIC, 0.1, -1.75)
+                                        elif time.time() - last_stop < 6:
+                                            is_stopped = False
+                                            turn_array.pop(0)
+                                            lane_following = not lane_following
+                                            print("Lane following =", lane_following)
+                                            await switch_lane_follow(ws, lane_following)
+                                    case 1:
+                                        if time.time() - last_stop < 2 + 3:
+                                            await send_cmd(ws, MANUAL_CMD_TOPIC, 0.1, 0)
+                                        elif time.time() - last_stop < 6:
+                                            is_stopped = False
+                                            turn_array.pop(0)
+                                            lane_following = not lane_following
+                                            print("Lane following =", lane_following)
+                                            await switch_lane_follow(ws, lane_following)
+                                    case 2:
+                                        if time.time() - last_stop < 2 + 4:
+                                            await send_cmd(ws, MANUAL_CMD_TOPIC, 0.1, 1.11)
+                                        elif time.time() - last_stop < 7:
+                                            is_stopped = False
+                                            turn_array.pop(0)
+                                            lane_following = not lane_following
+                                            print("Lane following =", lane_following)
+                                            await switch_lane_follow(ws, lane_following)
+                                    case 3:
+                                        if time.time() - last_stop < 2 + 1.5:
+                                            await send_cmd(ws, MANUAL_CMD_TOPIC, 0.1, 1.75)
+                                        elif time.time() - last_stop < 2 + 3:
+                                            await send_cmd(ws, MANUAL_CMD_TOPIC, 0.1, 2)
+                                        elif time.time() - last_stop < 6:
+                                            is_stopped = False
+                                            turn_array.pop(0)
+                                            lane_following = not lane_following
+                                            print("Lane following =", lane_following)
+                                            await switch_lane_follow(ws, lane_following)
+                                    case _:
+                                        pass
                             last_send = time.time()
 
                         await asyncio.sleep(0.01)
-                        # if time.time() - last_stop > 2.3:
-                        #     is_stopped = False
-                        #TODO: implement wait and turn logic here
 
                     cv2.imshow("frame", img)
                     # cv2.imshow("mask", mask1)
