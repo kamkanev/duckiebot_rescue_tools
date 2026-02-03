@@ -56,6 +56,8 @@ class GraphVisualizer:
         # UI state
         self.list_scroll = 0
         self.mode = "select_graph"  # select_graph, select_start, select_end, running, done
+        self.graph_offset_x = 0
+        self.graph_offset_y = 0
 
         self.crossroads = []
         self.turn_array = []
@@ -100,6 +102,9 @@ class GraphVisualizer:
                     if 0 <= j < len(self.graph.spots):
                         self.graph.spots[i].neighbors.append(self.graph.spots[j])
             
+            # Calculate offset to center graph in canvas
+            self._calculate_graph_offset()
+            
             self.start_spot = None
             self.end_spot = None
             self.astar = None
@@ -111,12 +116,42 @@ class GraphVisualizer:
             print(f"Error loading graph {graph_name}: {e}")
             return False
     
+    def _calculate_graph_offset(self):
+        """Calculate offset to center the graph in the canvas"""
+        if not self.graph or len(self.graph.spots) == 0:
+            self.graph_offset_x = 0
+            self.graph_offset_y = 0
+            return
+        
+        # Find bounding box
+        min_x = min(spot.position.x for spot in self.graph.spots)
+        max_x = max(spot.position.x for spot in self.graph.spots)
+        min_y = min(spot.position.y for spot in self.graph.spots)
+        max_y = max(spot.position.y for spot in self.graph.spots)
+        
+        # Canvas area (right of sidebar)
+        canvas_width = SCREEN_WIDTH - 300
+        canvas_height = SCREEN_HEIGHT
+        canvas_center_x = 300 + canvas_width / 2
+        canvas_center_y = canvas_height / 2
+        
+        # Graph center
+        graph_center_x = (min_x + max_x) / 2
+        graph_center_y = (min_y + max_y) / 2
+        
+        # Calculate offset
+        self.graph_offset_x = canvas_center_x - graph_center_x
+        self.graph_offset_y = canvas_center_y - graph_center_y
+    
     def get_spot_at_position(self, x, y, radius=15):
         """Find a spot near the given position"""
         if not self.graph:
             return None
         for spot in self.graph.spots:
-            dist = math.sqrt((spot.position.x - x) ** 2 + (spot.position.y - y) ** 2)
+            # Convert screen coordinates to graph coordinates using offset
+            spot_screen_x = spot.position.x + self.graph_offset_x
+            spot_screen_y = spot.position.y + self.graph_offset_y
+            dist = math.sqrt((spot_screen_x - x) ** 2 + (spot_screen_y - y) ** 2)
             if dist <= radius:
                 return spot
         return None
@@ -132,10 +167,23 @@ class GraphVisualizer:
                 if not self.astar.noSolution and self.astar.path:
                     self.crossroads = self.get_all_crossroads(self.astar.path)
                     self.turn_array = self.get_all_turns(self.crossroads, self.astar.path)
-                    for i, turn in enumerate(self.turn_array):
-                        print(f"Turn {i}: {turn}")
-                    #TODO: set the turn array
+                    # for i, turn in enumerate(self.turn_array):
+                    #     print(f"Turn {i}: {turn}")
+                    self.save_turns_to_file()
+
     
+    def save_turns_to_file(self, filename="turns.bin"):
+        """Save the turn array to a binary file"""
+        if not self.turn_array:
+            print("No turns to save.")
+            return
+        try:
+            with open(filename, 'wb') as f:
+                f.write(bytearray(reversed(self.turn_array)))
+            print(f"Turn array saved to {filename}")
+        except Exception as e:
+            print(f"Error saving turn array: {e}")
+
     def draw_sidebar(self):
         """Draw left sidebar with graph selection"""
         sidebar_rect = pygame.Rect(0, 0, 300, SCREEN_HEIGHT)
@@ -193,29 +241,35 @@ class GraphVisualizer:
             self.screen.blit(text, text_rect)
             return
         
-        # Draw graph
-        self.graph.draw(self.screen)
+        # Draw graph with offset
+        self._draw_graph_with_offset()
         
         # Draw start spot
         if self.start_spot:
+            screen_x = self.start_spot.position.x + self.graph_offset_x
+            screen_y = self.start_spot.position.y + self.graph_offset_y
             pygame.draw.circle(self.screen, GREEN, 
-                             (self.start_spot.position.x, self.start_spot.position.y), 
+                             (screen_x, screen_y), 
                              self.start_spot.size + 3, 2)
         
         # Draw end spot
         if self.end_spot:
+            screen_x = self.end_spot.position.x + self.graph_offset_x
+            screen_y = self.end_spot.position.y + self.graph_offset_y
             pygame.draw.circle(self.screen, RED, 
-                             (self.end_spot.position.x, self.end_spot.position.y), 
+                             (screen_x, screen_y), 
                              self.end_spot.size + 3, 2)
         
         # Draw A* visualization
         if self.astar:
-            self.astar.debugDraw(self.screen)
+            self._draw_astar_with_offset()
             if not self.astar.noSolution and self.astar.path:
                 if len(self.crossroads) > 0:
                     for p in self.crossroads:
                         if p < len(self.astar.path):
-                            pygame.draw.circle(self.screen, ORANGE, self.astar.path[p].position, self.astar.path[p].size + 5, 2)
+                            screen_x = self.astar.path[p].position.x + self.graph_offset_x
+                            screen_y = self.astar.path[p].position.y + self.graph_offset_y
+                            pygame.draw.circle(self.screen, ORANGE, (screen_x, screen_y), self.astar.path[p].size + 5, 2)
         
         # Draw instructions
         instructions_y = 20
@@ -331,6 +385,47 @@ class GraphVisualizer:
     
     def is_crossroad(self, waypoint, path):
         return len(path[waypoint].neighbors) > 2
+    
+    def _draw_graph_with_offset(self):
+        """Draw the graph with offset applied"""
+        if not self.graph:
+            return
+        for spot in self.graph.spots:
+            screen_x = spot.position.x + self.graph_offset_x
+            screen_y = spot.position.y + self.graph_offset_y
+            color = (100, 100, 100) if spot.isWall else BLUE
+            pygame.draw.circle(self.screen, color, (screen_x, screen_y), spot.size)
+        
+        # Draw edges
+        for spot in self.graph.spots:
+            for neighbor in spot.neighbors:
+                screen_x1 = spot.position.x + self.graph_offset_x
+                screen_y1 = spot.position.y + self.graph_offset_y
+                screen_x2 = neighbor.position.x + self.graph_offset_x
+                screen_y2 = neighbor.position.y + self.graph_offset_y
+                pygame.draw.line(self.screen, LIGHT_GRAY, (screen_x1, screen_y1), (screen_x2, screen_y2), 1)
+    
+    def _draw_astar_with_offset(self):
+        """Draw A* visualization with offset applied"""
+        if not self.astar:
+            return
+        for spot in self.astar.openSet:
+            screen_x = spot.position.x + self.graph_offset_x
+            screen_y = spot.position.y + self.graph_offset_y
+            pygame.draw.circle(self.screen, GREEN, (screen_x, screen_y), spot.size + 1, 1)
+        
+        for spot in self.astar.closeSet:
+            screen_x = spot.position.x + self.graph_offset_x
+            screen_y = spot.position.y + self.graph_offset_y
+            pygame.draw.circle(self.screen, RED, (screen_x, screen_y), spot.size + 1, 1)
+        
+        if self.astar.path:
+            for i in range(len(self.astar.path) - 1):
+                screen_x1 = self.astar.path[i].position.x + self.graph_offset_x
+                screen_y1 = self.astar.path[i].position.y + self.graph_offset_y
+                screen_x2 = self.astar.path[i + 1].position.x + self.graph_offset_x
+                screen_y2 = self.astar.path[i + 1].position.y + self.graph_offset_y
+                pygame.draw.line(self.screen, YELLOW, (screen_x1, screen_y1), (screen_x2, screen_y2), 2)
     
     def get_all_crossroads(self, path):
         crossroads = []

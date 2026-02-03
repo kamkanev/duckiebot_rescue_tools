@@ -27,7 +27,29 @@ TURN = 0.7
 2 - left
 3 - u-turn
 """
-turn_array = [2, 0, 3, 3]
+turn_array = [2, 0, 0, 3]
+
+def load_turns_from_file(filepath):
+    """
+    Read turn sequence from a binary file.
+    Each byte represents one turn (0=right, 1=forward, 2=left, 3=u-turn).
+    Returns a list of turn values.
+    """
+    try:
+        with open(filepath, 'rb') as f:
+            data = f.read()
+        turns = list(data)
+        print(f"Loaded {len(turns)} turns from {filepath}")
+        return turns
+    except FileNotFoundError:
+        print(f"Error: File {filepath} not found. Using empty turn array.")
+        return []
+    except Exception as e:
+        print(f"Error reading turns file: {e}")
+        return []
+
+# Load turns from binary file if it exists
+TURNS_FILE = f"turns.bin"
 
 # Toggle
 lane_following = True
@@ -102,6 +124,8 @@ async def main():
         last_stop = 0
         lower_red = np.array([0, 100, 100])
         upper_red = np.array([10, 255, 255])
+        turn_array = load_turns_from_file(TURNS_FILE)
+        print("Turn array:", turn_array)
         while True:
             raw = await ws.recv()
             msg = json.loads(raw)
