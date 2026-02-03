@@ -29,6 +29,9 @@ except Exception:
         AStarGraph = None
         AStar = None
 
+if sys.platform == "darwin":
+    os.environ["SDL_VIDEO_HIGHDPI_DISABLED"] = "1"
+
 pygame.init()
 
 #define window size and fps
@@ -36,6 +39,7 @@ FPS = 120
 
 clock = pygame.time.Clock()
 
+# base layout
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 800
 LOWER_MARGIN = 200
@@ -83,7 +87,7 @@ graph_list_selected = None  # index of selected spot for details overlay
 graph_list_expanded = set()  # reserved for future multi-expand support
 graph_overlay_scroll = 0
 
-#test graph and spots
+#test graph and spots (positions are updated by apply_layout)
 s1 = Spot(SCREEN_WIDTH + SIDE_MARGIN // 2, SCREEN_HEIGHT - TILE_SIZE // 2)
 s2 = Spot(SCREEN_WIDTH + SIDE_MARGIN // 2, SCREEN_HEIGHT + TILE_SIZE // 2)
 
@@ -94,13 +98,17 @@ for row in range(ROWS):
     world_map.append(r)
 
 
-screen = pygame.display.set_mode((SCREEN_WIDTH + SIDE_MARGIN, SCREEN_HEIGHT + LOWER_MARGIN))
+flags = pygame.RESIZABLE
+screen = pygame.display.set_mode(
+    (SCREEN_WIDTH + SIDE_MARGIN, SCREEN_HEIGHT + LOWER_MARGIN),
+    flags
+)
 pygame.display.set_caption("Map Editor")
 
 #load images (script-relative)
 image_path = os.path.join(os.path.dirname(__file__), 'img')
-grass_img = pygame.image.load(os.path.join(image_path, 'grass.jpg')).convert_alpha()
-grass_img = pygame.transform.scale(grass_img, (SCREEN_WIDTH, SCREEN_HEIGHT))
+grass_img_raw = pygame.image.load(os.path.join(image_path, 'grass.jpg')).convert_alpha()
+grass_img = pygame.transform.scale(grass_img_raw, (SCREEN_WIDTH, SCREEN_HEIGHT))
 
 button_path = os.path.join(os.path.dirname(__file__), 'img', 'buttons')
 save_img = pygame.image.load(os.path.join(button_path, 'save.png')).convert_alpha()
@@ -112,21 +120,92 @@ save_hover_img = pygame.transform.scale(save_hover_img, (150, 50))
 load_hover_img = pygame.image.load(os.path.join(button_path, 'load_hover.png')).convert_alpha()
 load_hover_img = pygame.transform.scale(load_hover_img, (150, 50))
 
-# load and store tile images
+# load and store tile images (raw)
 img_list = []
+gimg_list = []
+tile_raw_list = []
+gtile_raw_list = []
 tiles_dir = os.path.join(os.path.dirname(__file__), 'img', 'tiles')
 for x in range(TYLE_TYPES):
     img_path = os.path.join(tiles_dir, f'{x}_tile.png')
-    img = pygame.image.load(img_path).convert_alpha()
-    img = pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
-    img_list.append(img)
-
-gimg_list = []
+    tile_raw_list.append(pygame.image.load(img_path).convert_alpha())
 for x in range(GTYLE_TYPES):
     img_path = os.path.join(tiles_dir, f'{x}_gtile.png')
-    img = pygame.image.load(img_path).convert_alpha()
-    img = pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
-    gimg_list.append(img)
+    gtile_raw_list.append(pygame.image.load(img_path).convert_alpha())
+
+
+def apply_layout(window_w, window_h):
+    """Recompute layout-dependent sizes and assets after a window resize."""
+    global SCREEN_WIDTH, SCREEN_HEIGHT, TILE_SIZE, screen
+    global grass_img, img_list, gimg_list
+    global button_list, gbutton_list, save_button, load_button
+    global s1, s2
+
+    # keep margins fixed, recompute main canvas size
+    SCREEN_WIDTH = max(400, window_w - SIDE_MARGIN)
+    SCREEN_HEIGHT = max(300, window_h - LOWER_MARGIN)
+    TILE_SIZE = max(8, SCREEN_HEIGHT // ROWS)
+
+    # rescale background
+    grass_img = pygame.transform.scale(grass_img_raw, (SCREEN_WIDTH, SCREEN_HEIGHT))
+
+    # rescale tiles
+    img_list = [pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE)) for img in tile_raw_list]
+    gimg_list = [pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE)) for img in gtile_raw_list]
+
+    # refresh test spots
+    s1.position.x = SCREEN_WIDTH + SIDE_MARGIN // 2
+    s1.position.y = SCREEN_HEIGHT - TILE_SIZE // 2
+    s2.position.x = SCREEN_WIDTH + SIDE_MARGIN // 2
+    s2.position.y = SCREEN_HEIGHT + TILE_SIZE // 2
+
+    # rebuild tile buttons
+    button_list = []
+    gbutton_list = []
+    button_col = 0
+    button_row = 0
+    gbutton_col = 0
+    gbutton_row = 0
+    for i in range(len(img_list)):
+        tile_button = button.Button(
+            SCREEN_WIDTH + (150 * button_col) + 120,
+            (120 * button_row) + 120,
+            img_list[i],
+            1
+        )
+        button_list.append(tile_button)
+        button_col += 1
+        if button_col == 3:
+            button_col = 0
+            button_row += 1
+    for i in range(len(gimg_list)):
+        tile_button = button.Button(
+            SCREEN_WIDTH + (150 * gbutton_col) + 120,
+            (120 * gbutton_row) + 120,
+            gimg_list[i],
+            1
+        )
+        gbutton_list.append(tile_button)
+        gbutton_col += 1
+        if gbutton_col == 3:
+            gbutton_col = 0
+            gbutton_row += 1
+
+    # move save/load buttons
+    save_button = button.Button(
+        SCREEN_WIDTH // 2,
+        SCREEN_HEIGHT + LOWER_MARGIN - 100,
+        save_img,
+        scale=1,
+        hover_image=save_hover_img
+    )
+    load_button = button.Button(
+        SCREEN_WIDTH // 2 + 200,
+        SCREEN_HEIGHT + LOWER_MARGIN - 100,
+        load_img,
+        scale=1,
+        hover_image=load_hover_img
+    )
 
 def save_map(file_name):
     #save the map as a csv file in a folder named the same as the map file and in the saves folder
@@ -624,32 +703,8 @@ def draw_graph_list():
             pygame.draw.rect(screen, (80, 80, 80), (sb_x, sb_y, 12, sb_h))
             pygame.draw.rect(screen, (160, 160, 160), (sb_x + 2, handle_y, 8, handle_h))
 
-#create buttons
-button_list = []
-gbutton_list = []
-button_col = 0
-button_row = 0
-gbutton_col = 0
-gbutton_row = 0
-for i in range(len(img_list)):
-    tile_button = button.Button(SCREEN_WIDTH + (150 * button_col) + 120, (120 * button_row) + 120, img_list[i], 1)
-    button_list.append(tile_button)
-    button_col += 1
-    if button_col == 3:
-        button_col = 0
-        button_row += 1
-
-for i in range(len(gimg_list)):
-    tile_button = button.Button(SCREEN_WIDTH + (150 * gbutton_col) + 120, (120 * gbutton_row) + 120, gimg_list[i], 1)
-    gbutton_list.append(tile_button)
-    gbutton_col += 1
-    if gbutton_col == 3:
-        gbutton_col = 0
-        gbutton_row += 1
-
-#create save and load btns
-save_button = button.Button(SCREEN_WIDTH // 2, SCREEN_HEIGHT  + LOWER_MARGIN - 100, save_img, scale=1, hover_image=save_hover_img)
-load_button = button.Button(SCREEN_WIDTH // 2 + 200, SCREEN_HEIGHT + LOWER_MARGIN - 100, load_img, scale=1, hover_image=load_hover_img)
+#create buttons and scaled assets for initial layout
+apply_layout(SCREEN_WIDTH + SIDE_MARGIN, SCREEN_HEIGHT + LOWER_MARGIN)
 
 
 
@@ -888,6 +943,11 @@ while run:
                 else:
                     current_tile = current_tile + TYLE_TYPES * 3
             
+        if event.type == pygame.VIDEORESIZE:
+            # update window size and scale assets
+            screen = pygame.display.set_mode(event.size, flags)
+            apply_layout(event.size[0], event.size[1])
+
         if event.type == pygame.MOUSEBUTTONDOWN:
             if graphmode and (current_gtile == 0 or current_gtile >= 2):
                 is_pressedDown = True
