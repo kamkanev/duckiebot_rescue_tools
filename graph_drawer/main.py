@@ -1102,29 +1102,29 @@ for node in centerBlock:
                 square_x_end = node_x + 5
 
                 #cv2.rectangle(result,(square_x_start,square_y_start),(square_x_end,square_y_end),(0,0,255),1)
-                for verExt in verticalExtensionNodes:
-                    verExt_x = verExt['x']
-                    verExt_y = verExt['y']
-                    findClose(square_x_start,square_x_end,square_y_start,square_y_end,verExt_x,verExt_y, node_x,node_y, resultBorder)
-                    #Search for turning point
+                # for verExt in verticalExtensionNodes:
+                #     verExt_x = verExt['x']
+                #     verExt_y = verExt['y']
+                #     findClose(square_x_start,square_x_end,square_y_start,square_y_end,verExt_x,verExt_y, node_x,node_y, resultBorder)
+                #     #Search for turning point
                 
-                if(foundNode['weight'] != 0):
-                    edges.append({
-                            'from': (int(node_x),int(node_y)),
-                            'to': (int(foundNode['x']),int(foundNode['y'])),
-                            'weight': int(foundNode['weight'])
-                        })
-                    for verExt in verticalExtensionNodes:
-                        if(verExt['x'] == foundNode['x']) and (verExt['y'] == foundNode['y']):
-                            verExt['from'] = (node_x,node_y)
-                            node['to'] = (verExt_x,verExt_y)
-                            if(verExt['road'] >= node['road']):
-                                verExt['road'] = node['road']
-                            else: 
-                                node['road'] = verExt['road']
-                    draw_arrow_with_weight(result,  (node_x, node_y),(foundNode['x'], foundNode['y']), foundNode['weight'])
-                    foundNode['weight'] = 0  
-                foundNode['weight'] = 0
+                # if(foundNode['weight'] != 0):
+                #     edges.append({
+                #             'from': (int(node_x),int(node_y)),
+                #             'to': (int(foundNode['x']),int(foundNode['y'])),
+                #             'weight': int(foundNode['weight'])
+                #         })
+                #     for verExt in verticalExtensionNodes:
+                #         if(verExt['x'] == foundNode['x']) and (verExt['y'] == foundNode['y']):
+                #             verExt['from'] = (node_x,node_y)
+                #             node['to'] = (verExt_x,verExt_y)
+                #             if(verExt['road'] >= node['road']):
+                #                 verExt['road'] = node['road']
+                #             else: 
+                #                 node['road'] = verExt['road']
+                #     draw_arrow_with_weight(result,  (node_x, node_y),(foundNode['x'], foundNode['y']), foundNode['weight'])
+                #     foundNode['weight'] = 0  
+                # foundNode['weight'] = 0
             #search right
             else:
                 square_x_start = node_x
@@ -1276,28 +1276,28 @@ for node in centerBlock:
                 square_x_start = node_x
                 square_x_end = cropped.shape[1]
 
-                for verExt in verticalExtensionNodes:
-                    verExt_x = verExt['x']
-                    verExt_y = verExt['y']
+                # for verExt in verticalExtensionNodes:
+                #     verExt_x = verExt['x']
+                #     verExt_y = verExt['y']
 
-                    findClose(square_x_start,square_x_end,square_y_start,square_y_end,verExt_x,verExt_y, node_x,node_y, resultBorder)
+                #     findClose(square_x_start,square_x_end,square_y_start,square_y_end,verExt_x,verExt_y, node_x,node_y, resultBorder)
 
-                if(foundNode['weight'] != 0):
-                    edges.append({
-                            'from': (int(node_x),int(node_y)),
-                            'to': (int(foundNode['x']),int(foundNode['y'])),
-                            'weight': int(foundNode['weight'])
-                        })
-                    for verExt in verticalExtensionNodes:
-                        if(verExt['x'] == foundNode['x']) and (verExt['y'] == foundNode['y']):
-                                verExt['from'] = (node_x,node_y)
-                                node['to'] = (verExt_x,verExt_y)
-                                if(verExt['road'] >= node['road']):
-                                    verExt['road'] = node['road']
-                                else: 
-                                    node['road'] = verExt['road']
-                    draw_arrow_with_weight(result,  (node_x, node_y),(foundNode['x'], foundNode['y']), foundNode['weight'])
-                    foundNode['weight'] = 0    
+                # if(foundNode['weight'] != 0):
+                #     edges.append({
+                #             'from': (int(node_x),int(node_y)),
+                #             'to': (int(foundNode['x']),int(foundNode['y'])),
+                #             'weight': int(foundNode['weight'])
+                #         })
+                #     for verExt in verticalExtensionNodes:
+                #         if(verExt['x'] == foundNode['x']) and (verExt['y'] == foundNode['y']):
+                #                 verExt['from'] = (node_x,node_y)
+                #                 node['to'] = (verExt_x,verExt_y)
+                #                 if(verExt['road'] >= node['road']):
+                #                     verExt['road'] = node['road']
+                #                 else: 
+                #                     node['road'] = verExt['road']
+                #     draw_arrow_with_weight(result,  (node_x, node_y),(foundNode['x'], foundNode['y']), foundNode['weight'])
+                #     foundNode['weight'] = 0    
 
 print("\n=== Creating Edges from Horizontal Nodes ===")
 for node in centerBlock:
@@ -1381,36 +1381,36 @@ for node in centerBlock:
                         foundNode['weight'] = 0
                 foundNode['weight'] = 0
             #search down
-            else:
-                square_y_start = node_y
-                square_y_end = cropped.shape[0]  
-                #search for horizontal extension nodes
-                for horExt in horizontalExtensionNodes:
+            # else:
+            #     square_y_start = node_y
+            #     square_y_end = cropped.shape[0]  
+            #     #search for horizontal extension nodes
+            #     for horExt in horizontalExtensionNodes:
         
-                    horExt_x = horExt['x']
-                    horExt_y = horExt['y']
+            #         horExt_x = horExt['x']
+            #         horExt_y = horExt['y']
 
-                    # Add nodes into found nodes
-                    findClose(square_x_start,square_x_end,square_y_start,square_y_end,horExt_x,horExt_y,node_x,node_y, resultBorder)
+            #         # Add nodes into found nodes
+            #         findClose(square_x_start,square_x_end,square_y_start,square_y_end,horExt_x,horExt_y,node_x,node_y, resultBorder)
 
                             
-                if(foundNode['weight'] != 0):
-                    edges.append({
-                            'from': (int(node_x),int(node_y)),
-                            'to': (int(foundNode['x']),int(foundNode['y'])),
-                            'weight': int(foundNode['weight'])
-                        })
-                    for horExt in horizontalExtensionNodes:
-                        if(horExt['x'] == foundNode['x']) and (horExt['y'] == foundNode['y']):
-                                horExt['from'] = (node_x,node_y)
-                                node['to'] = (horExt_x,horExt_y)
-                                if(horExt['road'] >= node['road']):
-                                    horExt['road'] = node['road']
-                                else: 
-                                    node['road'] = horExt['road']
-                    draw_arrow_with_weight(result, (node_x, node_y), (foundNode['x'], foundNode['y']), foundNode['weight'])
-                    foundNode['weight'] = 0
-                foundNode['weight'] = 0
+            #     if(foundNode['weight'] != 0):
+            #         edges.append({
+            #                 'from': (int(node_x),int(node_y)),
+            #                 'to': (int(foundNode['x']),int(foundNode['y'])),
+            #                 'weight': int(foundNode['weight'])
+            #             })
+            #         for horExt in horizontalExtensionNodes:
+            #             if(horExt['x'] == foundNode['x']) and (horExt['y'] == foundNode['y']):
+            #                     horExt['from'] = (node_x,node_y)
+            #                     node['to'] = (horExt_x,horExt_y)
+            #                     if(horExt['road'] >= node['road']):
+            #                         horExt['road'] = node['road']
+            #                     else: 
+            #                         node['road'] = horExt['road']
+            #         draw_arrow_with_weight(result, (node_x, node_y), (foundNode['x'], foundNode['y']), foundNode['weight'])
+            #         foundNode['weight'] = 0
+            #     foundNode['weight'] = 0
     elif(node['type'] == 'horizontal' and node['yellowOn'] == 'left'):
         node_x = node['x']
         node_y = node['y']
@@ -1427,32 +1427,32 @@ for node in centerBlock:
                 square_y_start = 0
                 square_y_end = node_y + 5  
                 #search for horizontal extension nodes
-                for horExt in horizontalExtensionNodes:
+                # for horExt in horizontalExtensionNodes:
         
-                    horExt_x = horExt['x']
-                    horExt_y = horExt['y']
+                #     horExt_x = horExt['x']
+                #     horExt_y = horExt['y']
 
-                    # Add nodes into found nodes
-                    findClose(square_x_start,square_x_end,square_y_start,square_y_end,horExt_x,horExt_y,node_x,node_y, resultBorder)
+                #     # Add nodes into found nodes
+                #     findClose(square_x_start,square_x_end,square_y_start,square_y_end,horExt_x,horExt_y,node_x,node_y, resultBorder)
 
                             
-                if(foundNode['weight'] != 0):
-                    edges.append({
-                            'from': (int(node_x),int(node_y)),
-                            'to': (int(foundNode['x']),int(foundNode['y'])),
-                            'weight': int(foundNode['weight'])
-                        })
-                    for horExt in horizontalExtensionNodes:
-                            if(horExt['x'] == foundNode['x']) and (horExt['y'] == foundNode['y']):
-                                horExt['from'] = (node_x,node_y)
-                                node['to'] = (horExt_x,horExt_y)
-                                if(horExt['road'] >= node['road']):
-                                    horExt['road'] = node['road']
-                                else: 
-                                    node['road'] = horExt['road']
-                    draw_arrow_with_weight(result, (node_x, node_y), (foundNode['x'], foundNode['y']), foundNode['weight'])
-                    foundNode['weight'] = 0  
-                foundNode['weight'] = 0
+                # if(foundNode['weight'] != 0):
+                #     edges.append({
+                #             'from': (int(node_x),int(node_y)),
+                #             'to': (int(foundNode['x']),int(foundNode['y'])),
+                #             'weight': int(foundNode['weight'])
+                #         })
+                #     for horExt in horizontalExtensionNodes:
+                #             if(horExt['x'] == foundNode['x']) and (horExt['y'] == foundNode['y']):
+                #                 horExt['from'] = (node_x,node_y)
+                #                 node['to'] = (horExt_x,horExt_y)
+                #                 if(horExt['road'] >= node['road']):
+                #                     horExt['road'] = node['road']
+                #                 else: 
+                #                     node['road'] = horExt['road']
+                #     draw_arrow_with_weight(result, (node_x, node_y), (foundNode['x'], foundNode['y']), foundNode['weight'])
+                #     foundNode['weight'] = 0  
+                # foundNode['weight'] = 0
 
             #search down
             else:
