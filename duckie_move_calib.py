@@ -10,7 +10,7 @@ import sys
 BOT = sys.argv[1] if len(sys.argv) > 1 else "entebot208"
 WS_URL = f"ws://{BOT}.local:9001/ros_api"
 
-BASE_SPEED = 0.2
+BASE_SPEED = 0.5
 ANGULAR_SPEED = 0.5
 GAIN_STEP = 0.01  # how much to change per key press
 
@@ -78,6 +78,8 @@ async def send_velocity(ws, v, omega, gain_left, gain_right, trim_left, trim_rig
     
     v_avg = (v_l + v_r) / 2
     omega_adj = (v_r - v_l) / 2
+
+    print(f"Sending velocities => v: {v_avg:.2f}, omega: {omega_adj:.2f}")
     msg = {
         "op": "publish",
         "topic": TOPIC,
