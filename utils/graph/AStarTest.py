@@ -179,7 +179,7 @@ class GraphVisualizer:
             return
         try:
             with open(filename, 'wb') as f:
-                f.write(bytearray(reversed(self.turn_array)))
+                f.write(bytearray(self.turn_array))
             print(f"Turn array saved to {filename}")
         except Exception as e:
             print(f"Error saving turn array: {e}")

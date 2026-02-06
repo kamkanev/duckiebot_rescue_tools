@@ -141,7 +141,7 @@ async def main():
                     # result = cv2.bitwise_and(img, img, mask=mask1)
 
                     #checking for red recttangle
-                    cv2.rectangle(img,(304,420),(404,448),(0,255,0),3)
+                    # cv2.rectangle(img,(304,420),(404,448),(0,255,0),3)
 
                     if not is_stopped:
                         if len(turn_array) != 0:
@@ -160,14 +160,14 @@ async def main():
                                 await send_cmd(ws, MANUAL_CMD_TOPIC, 0, 0)
                                 # last_stop = time.time()
                             else:
-                                turn_type = turn_array[0]
+                                turn_type = turn_array[len(turn_array)-1]
                                 match turn_type:
                                     case 0:
                                         if time.time() - last_stop < 2 + 3:
                                             await send_cmd(ws, MANUAL_CMD_TOPIC, 0.1, -1.75)
                                         elif time.time() - last_stop < 6:
                                             is_stopped = False
-                                            turn_array.pop(0)
+                                            turn_array.pop()
                                             lane_following = not lane_following
                                             print("Lane following =", lane_following)
                                             await switch_lane_follow(ws, lane_following)
@@ -176,7 +176,7 @@ async def main():
                                             await send_cmd(ws, MANUAL_CMD_TOPIC, 0.1, 0)
                                         elif time.time() - last_stop < 6:
                                             is_stopped = False
-                                            turn_array.pop(0)
+                                            turn_array.pop()
                                             lane_following = not lane_following
                                             print("Lane following =", lane_following)
                                             await switch_lane_follow(ws, lane_following)
@@ -185,7 +185,7 @@ async def main():
                                             await send_cmd(ws, MANUAL_CMD_TOPIC, 0.1, 1.11)
                                         elif time.time() - last_stop < 7:
                                             is_stopped = False
-                                            turn_array.pop(0)
+                                            turn_array.pop()
                                             lane_following = not lane_following
                                             print("Lane following =", lane_following)
                                             await switch_lane_follow(ws, lane_following)
@@ -196,7 +196,7 @@ async def main():
                                             await send_cmd(ws, MANUAL_CMD_TOPIC, 0.1, 2)
                                         elif time.time() - last_stop < 6:
                                             is_stopped = False
-                                            turn_array.pop(0)
+                                            turn_array.pop()
                                             lane_following = not lane_following
                                             print("Lane following =", lane_following)
                                             await switch_lane_follow(ws, lane_following)
