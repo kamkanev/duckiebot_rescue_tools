@@ -1,10 +1,19 @@
 import cv2
 import numpy as np
 import math
+import os
+import sys
 
-img = cv2.imread("assets/copy2.jpg", cv2.IMREAD_UNCHANGED)
+image_arg = sys.argv[1] if len(sys.argv) > 1 else "copy2.jpg"
+if not os.path.isabs(image_arg) and not image_arg.startswith("assets" + os.sep):
+    image_path = os.path.join("assets", image_arg)
+else:
+    image_path = image_arg
 
-if img.shape[2] == 4:
+img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+if img is None:
+    raise FileNotFoundError(f"Could not read image: {image_path}")
+if img.ndim == 3 and img.shape[2] == 4:
     img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
 
 original = img.copy()

@@ -7,6 +7,7 @@ import csv
 import shutil
 import numpy as np
 import cv2
+import subprocess
 
 # Ensure project root is on sys.path so `from utils.graph.AStar import Spot` works
 repo_root = os.path.normpath(os.path.join(os.path.dirname(__file__), '..'))
@@ -216,7 +217,14 @@ def save_map(file_name):
     try:
         ok_img = save_map_image(file_name)
         if ok_img:
-            print(f'Map image saved as {file_name}.png')
+            print(f'Map image saved as {file_name}.jpg')
+            # auto-run graph generation
+            try:
+                repo_root = os.path.normpath(os.path.join(os.path.dirname(__file__), '..'))
+                runner = os.path.join(repo_root, 'app', 'run_graph.py')
+                subprocess.Popen([sys.executable, runner, f'{file_name}.jpg'])
+            except Exception:
+                pass
         else:
             print(f'Failed to save map image for {file_name}')
         return True
