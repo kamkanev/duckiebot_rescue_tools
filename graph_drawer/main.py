@@ -17,7 +17,7 @@ if img.ndim == 3 and img.shape[2] == 4:
     img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
 
 original = img.copy()
-draw_weights = False 
+draw_weights = True 
 dotRadius = 6
 
 #cropped image     
@@ -1967,6 +1967,7 @@ spots = []
 neighbors = []
 mapping = []
 visited = []
+weights = []
 j = 0
 for i, edge in enumerate(edges):
     if edge['from'] not in visited:
@@ -2018,10 +2019,16 @@ visited.clear()
 # neighbours = convert_tuples(neighbours)
 data = {
     'spots': spots,
-    'neighbors': neighbors
+    'neighbors': neighbors,
+    'weights': weights
 }
 
-with open("graph.json", "w") as f:
+repo_root = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
+graph_dir = os.path.join(repo_root, "mapeditor", "saves", "graph")
+os.makedirs(graph_dir, exist_ok=True)
+graph_path = os.path.join(graph_dir, "graph.json")
+
+with open(graph_path, "w") as f:
     json.dump(data, f, indent=4)
 
 # with open("graph.json", "w") as f:

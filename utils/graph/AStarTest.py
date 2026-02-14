@@ -35,7 +35,7 @@ YELLOW = (255, 255, 0)
 ORANGE = (255, 165, 0)
 
 class GraphVisualizer:
-    def __init__(self):
+    def __init__(self, initial_graph=None):
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("A* Pathfinding Visualizer")
         self.clock = pygame.time.Clock()
@@ -61,6 +61,10 @@ class GraphVisualizer:
 
         self.crossroads = []
         self.turn_array = []
+
+        if initial_graph and initial_graph in self.available_graphs:
+            self.selected_graph_idx = self.available_graphs.index(initial_graph)
+            self.load_graph(initial_graph)
         
     def _get_available_graphs(self):
         """Get list of available saved graphs"""
@@ -68,14 +72,18 @@ class GraphVisualizer:
         graphs = []
         if os.path.exists(saves_dir):
             for folder in os.listdir(saves_dir):
-                json_path = os.path.join(saves_dir, folder, f'{folder}.json')
-                if os.path.isfile(json_path):
+                legacy_path = os.path.join(saves_dir, folder, f'{folder}.json')
+                graph_path = os.path.join(saves_dir, folder, 'graph.json')
+                if os.path.isfile(legacy_path) or os.path.isfile(graph_path):
                     graphs.append(folder)
         return sorted(graphs)
     
     def load_graph(self, graph_name):
         """Load a graph from JSON"""
-        save_path = os.path.join(repo_root, 'mapeditor', 'saves', graph_name, f'{graph_name}.json')
+        save_root = os.path.join(repo_root, 'mapeditor', 'saves', graph_name)
+        graph_path = os.path.join(save_root, 'graph.json')
+        legacy_path = os.path.join(save_root, f'{graph_name}.json')
+        save_path = graph_path if os.path.isfile(graph_path) else legacy_path
         try:
             with open(save_path, 'r') as f:
                 data = json.load(f)
@@ -544,5 +552,6 @@ class GraphVisualizer:
 
 
 if __name__ == "__main__":
-    visualizer = GraphVisualizer()
+    initial = sys.argv[1] if len(sys.argv) > 1 else None
+    visualizer = GraphVisualizer(initial_graph=initial)
     visualizer.run()

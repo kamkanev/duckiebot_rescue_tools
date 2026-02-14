@@ -218,13 +218,14 @@ def save_map(file_name):
         ok_img = save_map_image(file_name)
         if ok_img:
             print(f'Map image saved as {file_name}.jpg')
-            # auto-run graph generation
+            # auto-run graph generation + A* UI, then quit editor
             try:
                 repo_root = os.path.normpath(os.path.join(os.path.dirname(__file__), '..'))
                 runner = os.path.join(repo_root, 'app', 'run_graph.py')
                 subprocess.Popen([sys.executable, runner, f'{file_name}.jpg'])
-            except Exception:
-                pass
+            finally:
+                global run
+                run = False
         else:
             print(f'Failed to save map image for {file_name}')
         return True
