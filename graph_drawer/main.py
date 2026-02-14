@@ -2,7 +2,11 @@ import cv2
 import numpy as np
 import math
 
-img = cv2.imread("assets/try5.jpg", 1)
+img = cv2.imread("assets/copy2.jpg", cv2.IMREAD_UNCHANGED)
+
+if img.shape[2] == 4:
+    img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+
 original = img.copy()
 draw_weights = False 
 dotRadius = 6
@@ -49,6 +53,8 @@ cropped = original[y_min:y_max, x_min:x_max]
 
 #red mask
 img = cv2.cvtColor(cropped, cv2.COLOR_BGR2HSV)
+height, width = img.shape[:2]
+
 
 red_lower = np.array([60, 130, 20]) 
 red_upper = np.array([180, 255, 255]) 
@@ -66,7 +72,7 @@ upper_White = np.array([180, 10, 255])
 white_mask = cv2.inRange(img, lower_White, upper_White) 
 resultWhite = cv2.bitwise_and(resultWhite, resultWhite, mask=white_mask) 
 
-lower_yellow = np.array([20, 65, 100])
+lower_yellow = np.array([20, 120, 100])
 upper_yellow = np.array([31, 255, 255])
 yellow_mask = cv2.inRange(img, lower_yellow, upper_yellow) 
 resultYellow = cv2.bitwise_and(resultYellow, resultYellow, mask=yellow_mask) 
@@ -330,8 +336,8 @@ def drawPoints(drawDown, x, y, img_height, top, left, right, down, checkPrevious
     print(f"{lastLeft,lastRight,lastTop,lastDown}")
     print(f"{left, right, top, down}")
 
-    x_bound = 14
-    y_bound = 14
+    x_bound = 13
+    y_bound = 13
     flip = False
     global flipped 
 
@@ -945,6 +951,7 @@ print("\n=== Creating Edges from Intersection Nodes ===")
 for intersection in intersectionNodes:
     int_x = intersection['x']
     int_y = intersection['y']
+    cv2.rectangle(result,(int_x-40,int_y-40),(int_x+40,int_y+34),(0,255,255),1)
     searchRadius = intersection['height'] + 10
     
     # Create a square search area with intersection as center

@@ -5,6 +5,8 @@ import json
 import sys
 import csv
 import shutil
+import numpy as np
+import cv2
 
 # Ensure project root is on sys.path so `from utils.graph.AStar import Spot` works
 repo_root = os.path.normpath(os.path.join(os.path.dirname(__file__), '..'))
@@ -208,32 +210,131 @@ def apply_layout(window_w, window_h):
     )
 
 def save_map(file_name):
-    #save the map as a csv file in a folder named the same as the map file and in the saves folder
+    #save the map as a jpg image in graph_drawer/assets
     if len(file_name) <= 0:
         file_name = placeholder
-    save_dir = os.path.join(os.path.dirname(__file__), 'saves', file_name)
     try:
-        os.makedirs(save_dir, exist_ok=True)
-        tmp_path = os.path.join(save_dir, f'{file_name}.csv.tmp')
-        final_path = os.path.join(save_dir, f'{file_name}.csv')
-        with open(tmp_path, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile, delimiter=',')
-            for row in world_map:
-                writer.writerow(row)
-        os.replace(tmp_path, final_path)
-        print(f'Map saved as {file_name}.csv')
-        # also try to save graph alongside the map
-        try:
-            okg = save_graph(file_name)
-            if okg:
-                print(f'Graph saved as {file_name}.json')
-            else:
-                print(f'Failed to save graph for {file_name}')
-        except Exception:
-            pass
+        ok_img = save_map_image(file_name)
+        if ok_img:
+            print(f'Map image saved as {file_name}.png')
+        else:
+            print(f'Failed to save map image for {file_name}')
         return True
     except Exception as e:
         print(f'Error saving map {file_name}: {e}')
+        return False
+
+def save_map_image(file_name):
+    """Save a rendered map image (without UI) to JPG in graph_drawer/assets."""
+    if len(file_name) <= 0:
+        file_name = placeholder
+    save_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'graph_drawer', 'assets'))
+    try:
+        os.makedirs(save_dir, exist_ok=True)
+        final_jpg = os.path.join(save_dir, f'{file_name}.jpg')
+        tmp_jpg = os.path.join(save_dir, f'.{file_name}.tmp.jpg')
+
+        # compute tight bounds around placed tiles, with 1-tile margin
+        min_x = COLS
+        max_x = -1
+        min_y = ROWS
+        max_y = -1
+        for y, row in enumerate(world_map):
+            for x, tile in enumerate(row):
+                if tile >= 0:
+                    if x < min_x:
+                        min_x = x
+                    if x > max_x:
+                        max_x = x
+                    if y < min_y:
+                        min_y = y
+                    if y > max_y:
+                        max_y = y
+
+        if max_x < 0 or max_y < 0:
+            # no tiles placed; fall back to full grid
+            min_x = 0
+            min_y = 0
+            max_x = COLS - 1
+            max_y = ROWS - 1
+
+        export_tile_size = 80
+        margin = 0.2
+        tile_pad = int(margin)
+        extra_px = int(round((margin - tile_pad) * export_tile_size))
+        min_x = max(0, min_x - tile_pad)
+        min_y = max(0, min_y - tile_pad)
+        max_x = min(COLS - 1, max_x + tile_pad)
+        max_y = min(ROWS - 1, max_y + tile_pad)
+
+        crop_cols = max_x - min_x + 1
+        crop_rows = max_y - min_y + 1
+        map_w = crop_cols * export_tile_size + extra_px * 2
+        map_h = crop_rows * export_tile_size + extra_px * 2
+        map_surface = pygame.Surface((map_w, map_h))
+
+        # tile grass background per cell (prevents stretched texture)
+        grass_tile = pygame.transform.scale(grass_img_raw, (export_tile_size, export_tile_size))
+        export_img_list = [
+            pygame.transform.scale(img, (export_tile_size, export_tile_size))
+            for img in tile_raw_list
+        ]
+        for y in range((map_h + export_tile_size - 1) // export_tile_size):
+            for x in range((map_w + export_tile_size - 1) // export_tile_size):
+                map_surface.blit(grass_tile, (x * export_tile_size, y * export_tile_size))
+
+        # draw road tiles within crop
+        for y in range(min_y, max_y + 1):
+            for x in range(min_x, max_x + 1):
+                tile = world_map[y][x]
+                if tile >= 0:
+                    blitRotateCenter(
+                        map_surface,
+                        export_img_list[tile % TYLE_TYPES],
+                        ((x - min_x) * export_tile_size + extra_px, (y - min_y) * export_tile_size + extra_px),
+                        (tile // TYLE_TYPES) * 90
+                    )
+
+        # no grid lines in saved image
+        # adjust yellow saturation/value to fit CV mask range
+        try:
+            rgb = pygame.surfarray.array3d(map_surface)  # (w, h, 3)
+            rgb = np.transpose(rgb, (1, 0, 2))  # (h, w, 3)
+            hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV).astype(np.float32)
+            # For yellow-ish hues, force into mask-friendly range
+            h = hsv[..., 0]
+            s = hsv[..., 1]
+            v = hsv[..., 2]
+            # broader hue window to catch rotated/anti-aliased yellow dashes
+            yellowish = (h >= 15) & (h <= 45) & (s >= 60) & (v >= 60)
+            h[yellowish] = 26
+            s[yellowish] = np.clip(np.maximum(s[yellowish], 120), 0, 255)
+            v[yellowish] = np.clip(np.maximum(v[yellowish], 100), 0, 255)
+            hsv[..., 0] = h
+            hsv[..., 1] = s
+            hsv[..., 2] = v
+            rgb_boost = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2RGB)
+            rgb_boost = np.transpose(rgb_boost, (1, 0, 2))
+            map_surface = pygame.surfarray.make_surface(rgb_boost)
+        except Exception:
+            pass
+
+        # save as jpg only
+        try:
+            rgb = pygame.surfarray.array3d(map_surface)
+            rgb = np.transpose(rgb, (1, 0, 2))  # (h, w, 3)
+            bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+            cv2.imwrite(tmp_jpg, bgr)
+            os.replace(tmp_jpg, final_jpg)
+        except Exception:
+            try:
+                if os.path.exists(tmp_jpg):
+                    os.remove(tmp_jpg)
+            except Exception:
+                pass
+        return True
+    except Exception as e:
+        print(f'Error saving map image {file_name}: {e}')
         try:
             if 'tmp_path' in locals() and os.path.exists(tmp_path):
                 os.remove(tmp_path)
@@ -556,22 +657,28 @@ def show_message(text, seconds=1.2):
 
 #draw functions
 
-def draw_bg():
-    screen.fill(BLACK)
-    screen.blit(grass_img, (0, 0))
+def draw_bg(target=None):
+    if target is None:
+        target = screen
+    target.fill(BLACK)
+    target.blit(grass_img, (0, 0))
 
-def draw_grid():
+def draw_grid(target=None):
+    if target is None:
+        target = screen
     for row in range(ROWS + 1):
-        pygame.draw.line(screen, WHITE, (0, row * TILE_SIZE), (SCREEN_WIDTH, row * TILE_SIZE))
+        pygame.draw.line(target, WHITE, (0, row * TILE_SIZE), (SCREEN_WIDTH, row * TILE_SIZE))
     for col in range(COLS + 1):
-        pygame.draw.line(screen, WHITE, (col * TILE_SIZE, 0), (col * TILE_SIZE, SCREEN_HEIGHT))
+        pygame.draw.line(target, WHITE, (col * TILE_SIZE, 0), (col * TILE_SIZE, SCREEN_HEIGHT))
 
-def draw_world():
+def draw_world(target=None):
+    if target is None:
+        target = screen
     for y, row in enumerate(world_map):
         for x, tile in enumerate(row):
             if tile >= 0:
                 #screen.blit(img_list[tile%TYLE_TYPES], (x * TILE_SIZE, y * TILE_SIZE))
-                blitRotateCenter(screen, img_list[tile%TYLE_TYPES], (x * TILE_SIZE, y * TILE_SIZE), (tile // TYLE_TYPES) * 90)
+                blitRotateCenter(target, img_list[tile%TYLE_TYPES], (x * TILE_SIZE, y * TILE_SIZE), (tile // TYLE_TYPES) * 90)
 
 def draw_current_tile():
     pygame.draw.rect(screen, BLACK, (SCREEN_WIDTH + SIDE_MARGIN // 2 - TILE_SIZE - 5, SCREEN_HEIGHT - TILE_SIZE - 5, TILE_SIZE * 2 + 10, TILE_SIZE * 2 + 10))
