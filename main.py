@@ -39,6 +39,7 @@ RED = (255, 0, 0)
 GREEN = (0, 200, 0)
 BLUE = (0, 120, 255)
 YELLOW = (255, 200, 0)
+PURPLE = (138, 43, 226)
 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption('Map + Graph Viewer')
@@ -70,6 +71,7 @@ class App:
 		self.graph_min_y = 0
 		# per-spot visual snap offsets (screen-space) to align with image roads
 		self.snap_offsets = {}
+		self.hover_spot = None
 
 		# whether to render full graph (we'll hide by default and show only path/start/end)
 		self.show_graph = False
@@ -250,6 +252,30 @@ class App:
 				return s
 		return None
 
+	def find_nearest_spot(self, sx, sy, max_radius=80):
+		"""Return (spot, distance) of nearest spot within max_radius (canvas pixels), or (None, None)."""
+		if not self.graph:
+			return (None, None)
+		best = None
+		best_d2 = None
+		base_x = self.graph_offset_x + self.graph_extra_x
+		base_y = self.graph_offset_y + self.graph_extra_y
+		for i, s in enumerate(self.graph.spots):
+			x = float(s.position.x) * self.graph_scale + base_x
+			y = float(s.position.y) * self.graph_scale + base_y
+			off = self.snap_offsets.get(i, (0, 0))
+			x += off[0]; y += off[1]
+			d2 = (x - sx) ** 2 + (y - sy) ** 2
+			if best_d2 is None or d2 < best_d2:
+				best_d2 = d2
+				best = s
+		if best is None:
+			return (None, None)
+		d = math.sqrt(best_d2)
+		if d <= max_radius:
+			return (best, d)
+		return (None, None)
+
 	def _snap_spots_to_image(self, max_radius=40, threshold=100):
 		"""Find nearest dark pixel in the loaded image for each spot and store a small screen-space offset.
 		This is a visual-only adjustment so nodes appear on roads in the image.
@@ -293,12 +319,57 @@ class App:
 					if best_d2 is None or d2 < best_d2:
 						best_d2 = d2
 						best = (dx, dy)
-			# store small offset if found
-			if best is not None and best_d2 is not None and best_d2 <= (max_radius * max_radius):
-				self.snap_offsets[i] = best
-			else:
-				# no road found nearby
-				self.snap_offsets[i] = (0, 0)
+				# store small offset if found
+				if best is not None and best_d2 is not None and best_d2 <= (max_radius * max_radius):
+					self.snap_offsets[i] = best
+				else:
+					# no road found nearby
+					self.snap_offsets[i] = (0, 0)
+
+
+	def waypoints2path(self, samples=6):
+		"""Convert `self.astar.path` (list of spots) into a dense list of canvas points.
+		`samples` specifies how many interpolated points between each waypoint (including endpoints).
+		"""
+		if not self.astar or not getattr(self.astar, 'path', None):
+			return []
+		pts = []
+		nodes = self.astar.path
+		for idx in range(len(nodes) - 1):
+			a = nodes[idx]
+			b = nodes[idx + 1]
+			# find indices in graph to get snap offsets
+			try:
+				i_a = self.graph.spots.index(a)
+			except ValueError:
+				i_a = None
+			try:
+				i_b = self.graph.spots.index(b)
+			except ValueError:
+				i_b = None
+			off_a = self.snap_offsets.get(i_a, (0, 0)) if i_a is not None else (0, 0)
+			off_b = self.snap_offsets.get(i_b, (0, 0)) if i_b is not None else (0, 0)
+			x1 = float(a.position.x) * self.graph_scale + self.graph_offset_x + self.graph_extra_x + off_a[0]
+			y1 = float(a.position.y) * self.graph_scale + self.graph_offset_y + self.graph_extra_y + off_a[1]
+			x2 = float(b.position.x) * self.graph_scale + self.graph_offset_x + self.graph_extra_x + off_b[0]
+			y2 = float(b.position.y) * self.graph_scale + self.graph_offset_y + self.graph_extra_y + off_b[1]
+			for s in range(samples):
+				u = s / float(samples - 1)
+				x = x1 * (1.0 - u) + x2 * u
+				y = y1 * (1.0 - u) + y2 * u
+				pts.append((int(round(x)), int(round(y))))
+		# ensure last waypoint included
+		last = nodes[-1]
+		try:
+			il = self.graph.spots.index(last)
+		except ValueError:
+			il = None
+		off_l = self.snap_offsets.get(il, (0, 0)) if il is not None else (0, 0)
+		xl = int(round(last.position.x * self.graph_scale + self.graph_offset_x + self.graph_extra_x + off_l[0]))
+		yl = int(round(last.position.y * self.graph_scale + self.graph_offset_y + self.graph_extra_y + off_l[1]))
+		if not pts or pts[-1] != (xl, yl):
+			pts.append((xl, yl))
+		return pts
 
 	def start_astar(self):
 		if self.start_spot and self.end_spot:
@@ -352,6 +423,21 @@ class App:
 		screen.blit(font.render('[ ] : graph left/right 10px', True, BLACK), (12, y))
 		y += 18
 
+		# toggle button for showing/hiding the graph
+		btn_w = SIDEBAR_W - 24
+		btn_h = 28
+		btn_x = 12
+		btn_y = SCREEN_HEIGHT - 60
+		self.toggle_button_rect = pygame.Rect(btn_x, btn_y, btn_w, btn_h)
+		btn_color = GREEN if self.show_graph else GRAY
+		pygame.draw.rect(screen, btn_color, self.toggle_button_rect)
+		# button label
+		label = 'Hide Graph' if self.show_graph else 'Show Graph'
+		txt = font.render(label, True, BLACK)
+		tx = btn_x + 8
+		ty = btn_y + (btn_h - txt.get_height()) // 2
+		screen.blit(txt, (tx, ty))
+
 	def draw_canvas(self):
 		# white background
 		pygame.draw.rect(screen, WHITE, (SIDEBAR_W, 0, SCREEN_WIDTH - SIDEBAR_W, SCREEN_HEIGHT))
@@ -363,20 +449,12 @@ class App:
 			screen.blit(self.image, (img_x, img_y))
 
 		# draw graph
-		# If we have a computed path, show only the path and start/end markers
+		# If we have a computed path, show only the path (as a smooth polyline) and start/end markers
 		path = getattr(self.astar, 'path', None) if self.astar else None
 		if path:
-			# draw only path lines
-			for i in range(len(path) - 1):
-				x1 = int(path[i].position.x * self.graph_scale + self.graph_offset_x + self.graph_extra_x)
-				y1 = int(path[i].position.y * self.graph_scale + self.graph_offset_y + self.graph_extra_y)
-				o1 = self.snap_offsets.get(i, (0, 0))
-				x1 += int(o1[0]); y1 += int(o1[1])
-				x2 = int(path[i + 1].position.x * self.graph_scale + self.graph_offset_x + self.graph_extra_x)
-				y2 = int(path[i + 1].position.y * self.graph_scale + self.graph_offset_y + self.graph_extra_y)
-				o2 = self.snap_offsets.get(i + 1, (0, 0))
-				x2 += int(o2[0]); y2 += int(o2[1])
-				pygame.draw.line(screen, YELLOW, (x1, y1), (x2, y2), max(2, int(4 * self.graph_scale)))
+			pts = self.waypoints2path(samples=8)
+			if pts and len(pts) > 1:
+				pygame.draw.lines(screen, PURPLE, False, pts, max(3, int(6 * self.graph_scale)))
 		else:
 			# if show_graph True, draw full graph; otherwise show only selected start/end markers
 			if self.show_graph and self.graph:
@@ -440,18 +518,7 @@ class App:
 					x += int(off[0])
 					y += int(off[1])
 				pygame.draw.circle(screen, RED, (x, y), max(1, int(s.size * self.graph_scale)) + 2, 1)
-			path = getattr(self.astar, 'path', None)
-			if path:
-				for i in range(len(path) - 1):
-					x1 = int(path[i].position.x * self.graph_scale + self.graph_offset_x)
-					y1 = int(path[i].position.y * self.graph_scale + self.graph_offset_y)
-					x2 = int(path[i + 1].position.x * self.graph_scale + self.graph_offset_x)
-					y2 = int(path[i + 1].position.y * self.graph_scale + self.graph_offset_y)
-					o1 = self.snap_offsets.get(i, (0, 0))
-					o2 = self.snap_offsets.get(i + 1, (0, 0))
-					x1 += int(o1[0]); y1 += int(o1[1])
-					x2 += int(o2[0]); y2 += int(o2[1])
-					pygame.draw.line(screen, YELLOW, (x1, y1), (x2, y2), max(1, int(3 * self.graph_scale)))
+			# (path polyline is drawn earlier via waypoints2path)
 
 		# draw start/end markers
 		if self.start_spot:
@@ -476,6 +543,28 @@ class App:
 				off = self.snap_offsets.get(i, (0, 0))
 				x += int(off[0]); y += int(off[1])
 			pygame.draw.circle(screen, RED, (x, y), max(1, int(self.end_spot.size * self.graph_scale)) + 4, 3)
+
+		# draw path nodes as purple circles if a path exists (replace lines)
+		if self.astar and getattr(self.astar, 'path', None):
+			for idx, p in enumerate(self.astar.path):
+				x = int(p.position.x * self.graph_scale + self.graph_offset_x + self.graph_extra_x)
+				y = int(p.position.y * self.graph_scale + self.graph_offset_y + self.graph_extra_y)
+				off = self.snap_offsets.get(idx, (0, 0))
+				x += int(off[0]); y += int(off[1])
+				pygame.draw.circle(screen, PURPLE, (x, y), max(2, int(4 * self.graph_scale)))
+
+		# draw hover highlight (outline) if any
+		if getattr(self, 'hover_spot', None) is not None:
+			try:
+				i = self.graph.spots.index(self.hover_spot)
+			except Exception:
+				i = None
+			if i is not None:
+				x = int(self.hover_spot.position.x * self.graph_scale + self.graph_offset_x + self.graph_extra_x)
+				y = int(self.hover_spot.position.y * self.graph_scale + self.graph_offset_y + self.graph_extra_y)
+				off = self.snap_offsets.get(i, (0, 0))
+				x += int(off[0]); y += int(off[1])
+				pygame.draw.circle(screen, YELLOW, (x, y), max(3, int(6 * self.graph_scale)), 2)
 
 	def run(self):
 		running = True
@@ -504,6 +593,8 @@ class App:
 							self.step_astar()
 					elif ev.key == pygame.K_r:
 						self.reset()
+					elif ev.key == pygame.K_g:
+						self.show_graph = not self.show_graph
 					# nudge image: comma/period
 					elif ev.key == pygame.K_COMMA:
 						self.image_shift_x -= 10
@@ -517,14 +608,18 @@ class App:
 
 				elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
 					mx, my = ev.pos
+					# check sidebar toggle button first
+					if mx <= SIDEBAR_W and getattr(self, 'toggle_button_rect', None) and self.toggle_button_rect.collidepoint(mx, my):
+						self.show_graph = not self.show_graph
+						continue
 					if mx > SIDEBAR_W:
-						# canvas click
-						s = self.get_spot_at(mx, my)
-						if s:
+						# canvas click: pick nearest spot within a reasonable radius
+						spot, dist = self.find_nearest_spot(mx, my, max_radius=80)
+						if spot:
 							if not self.start_spot:
-								self.start_spot = s
-							elif not self.end_spot and s is not self.start_spot:
-								self.end_spot = s
+								self.start_spot = spot
+							elif not self.end_spot and spot is not self.start_spot:
+								self.end_spot = spot
 								# immediately run full A* once two points are selected and show only the path
 								self.start_astar()
 								# run until done
@@ -534,6 +629,14 @@ class App:
 									# after run, ensure we only display the path
 									self.show_graph = False
 
+			# draw
+			# update hover spot
+			mx, my = pygame.mouse.get_pos()
+			if mx > SIDEBAR_W:
+				spot, dist = self.find_nearest_spot(mx, my, max_radius=48)
+				self.hover_spot = spot
+			else:
+				self.hover_spot = None
 			# draw
 			screen.fill(WHITE)
 			self.draw_sidebar()
