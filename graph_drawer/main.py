@@ -467,14 +467,17 @@ def checkForTurningPoints(x,y,x_search,y_search,direction,bound,width2):
     else:
         return False
     
-    #cv2.rectangle(result,(x_start,y_start),(x_end,y_end),(0,0,255),1)
+    if(x == 657 and y == 206):
+        cv2.rectangle(result,(x_start,y_start),(x_end,y_end),(0,0,255),1)
 
-    if (x_start < x_search < x_end) and (y_start < y_search < y_end):
+    if (x_start <= x_search <= x_end) and (y_start <= y_search <= y_end):
         # skip if red is present between current point and candidate
         red_mask = cv2.inRange(hsv, red_lower, red_upper)
-        line_mask = np.zeros_like(red_mask)
+        white_mask = cv2.inRange(hsv,lower_White,upper_White)
+        combined = cv2.bitwise_or(red_mask, white_mask)
+        line_mask = np.zeros_like(combined)
         cv2.line(line_mask, (int(x), int(y)), (int(x_search), int(y_search)), 255, thickness=2)
-        if np.any(cv2.bitwise_and(line_mask, red_mask)):
+        if np.any(cv2.bitwise_and(line_mask, combined)):
             return False
         return True
     
@@ -501,14 +504,23 @@ def reorder(turning_points, start=0, search=False):
             # Check each direction
             found_any = False
             for direction in directions:
-                blocked = checkPlot(x, y, direction, 50,10)
+                blocked = checkPlot(x, y, direction, 45,10)
+                if(direction == 'left'):
+                    print(f"{blocked} for {direction} at point {i}")
                 if not blocked:
+                    best_j = None
+                    best_d2 = None
                     for j, other_point in enumerate(turning_points):
                         ox, oy = int(other_point[0]), int(other_point[1])
                         if checkForTurningPoints(x, y, ox, oy, direction,400,40) and ((ox,oy) not in visited):
-                            print(f"Turning point found at index {j} in direction {direction}")
-                            found_any = True
-                            reorder(turning_points, j, True)
+                            d2 = (ox - x) * (ox - x) + (oy - y) * (oy - y)
+                            if best_d2 is None or d2 < best_d2:
+                                best_d2 = d2
+                                best_j = j
+                    if best_j is not None:
+                        print(f"Turning point found at index {best_j} in direction {direction}")
+                        found_any = True
+                        reorder(turning_points, best_j, True)
             if not found_any:
                 reordered.append((0, 0))
 
@@ -604,10 +616,10 @@ for i, point in enumerate(turningPoints):
 
     print(f"Before: {lastLeft,lastRight,lastTop,lastDown}")   
 
-    top = checkPlot(x, y, 'top',50,10)
-    left = checkPlot(x, y, 'left',50,10)
-    right = checkPlot(x,y, 'right',50,10)
-    down = checkPlot(x,y,'down',50,10)
+    top = checkPlot(x, y, 'top',45,10)
+    left = checkPlot(x, y, 'left',45,10)
+    right = checkPlot(x,y, 'right',45,10)
+    down = checkPlot(x,y,'down',45,10)
 
     if(lastDown == False and lastTop == False and lastLeft == False and lastRight == False):
         lastDown = down
