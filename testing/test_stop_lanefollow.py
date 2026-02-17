@@ -142,6 +142,7 @@ async def main():
 
                     #checking for red recttangle
                     # cv2.rectangle(img,(304,420),(404,448),(0,255,0),3)
+                    # cv2.rectangle(img,(304,440),(404,468),(0,255,0),3)
 
                     if not is_stopped:
                         if len(turn_array) != 0:
@@ -182,7 +183,7 @@ async def main():
                                             await switch_lane_follow(ws, lane_following)
                                     case 2:
                                         if time.time() - last_stop < 2 + 4:
-                                            await send_cmd(ws, MANUAL_CMD_TOPIC, 0.1, 1.11)
+                                            await send_cmd(ws, MANUAL_CMD_TOPIC, 0.1, 1.3)
                                         elif time.time() - last_stop < 7:
                                             is_stopped = False
                                             turn_array.pop()
