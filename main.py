@@ -35,6 +35,7 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GRAY = (200, 200, 200)
 LIGHT_GRAY = (220, 220, 220)
+DARK_GRAY = (100, 100, 100)
 RED = (255, 0, 0)
 GREEN = (0, 200, 0)
 BLUE = (0, 120, 255)
@@ -396,6 +397,67 @@ class App:
 		self.algorithm_running = False
 		self.algorithm_done = False
 
+	def is_crossroad(self, waypoint, path):
+		"""Check if a waypoint is a crossroad (>2 neighbors)."""
+		if waypoint < 0 or waypoint >= len(path):
+			return False
+		return len(path[waypoint].neighbors) > 2
+
+	def is_uturn(self, waypoint, path):
+		"""Check if waypoint is a U-turn based on distance to previous and next."""
+		if len(path) == 0 or waypoint <= 0 or waypoint >= len(path) - 1:
+			return False
+		dist = math.sqrt((path[waypoint - 1].position.x - path[waypoint + 1].position.x) ** 2 +
+		                  (path[waypoint - 1].position.y - path[waypoint + 1].position.y) ** 2)
+		return dist < 30
+
+	def get_turn_type(self, waypoint, path):
+		"""Calculate turn direction at a crossroad waypoint: 0=right, 1=straight, 2=left, 3=uturn.
+		Only call this on crossroad nodes (nodes with >2 neighbors).
+		"""
+		# only process crossroad nodes
+		if not self.is_crossroad(waypoint, path):
+			return 1  # default to straight for non-crossroads
+		if waypoint <= 0 or waypoint >= len(path) - 1:
+			return 1  # straight as default
+		cur = path[waypoint]
+		nxt = path[waypoint + 1]
+		prev = path[waypoint - 1]
+		# forward vector (from current to next)
+		fx = nxt.position.x - cur.position.x
+		fy = nxt.position.y - cur.position.y
+		# incoming vector (from previous to current)
+		nx = prev.position.x - cur.position.x
+		ny = prev.position.y - cur.position.y
+		# angle between forward and incoming vector
+		ang = math.degrees(math.atan2(ny, nx) - math.atan2(fy, fx))
+		ang = (ang + 180) % 360 - 180  # normalize to [-180, 180]
+		self.last_ang = ang  # store for debugging
+		# check for U-turn first
+		if abs(ang) < 30:
+			return 1
+		elif ang > 0:
+			if self.is_uturn(waypoint, path):
+				return 3
+			else:
+				return 2
+		else:
+			if self.is_uturn(waypoint, path):
+				return 3
+			else:
+				return 0
+
+	def get_all_turns(self, path):
+		"""Return list of turn types at all crossroads in path."""
+		if not path:
+			return []
+		turns = []
+		for i in range(len(path)):
+			if self.is_crossroad(i, path):
+				turn_type = self.get_turn_type(i, path)
+				turns.append(turn_type)
+		return turns
+
 	def draw_sidebar(self):
 		# background
 		pygame.draw.rect(screen, LIGHT_GRAY, (0, 0, SIDEBAR_W, SCREEN_HEIGHT))
@@ -408,26 +470,13 @@ class App:
 			screen.blit(txt, (16, y))
 			y += 22
 
-		# quick help
-		y = SCREEN_HEIGHT - 120
-		screen.blit(title_font.render('Controls', True, BLACK), (12, y))
-		y += 28
-		hints = ['UP/DOWN: select', 'ENTER: load', 'Click: pick spot', 'SPACE: step/run', 'R: reset', 'ESC: quit']
-		for h in hints:
-			screen.blit(font.render(h, True, BLACK), (12, y))
-			y += 20
-
-		# nudges help
-		screen.blit(font.render(',. : image left/right 10px', True, BLACK), (12, y))
-		y += 18
-		screen.blit(font.render('[ ] : graph left/right 10px', True, BLACK), (12, y))
-		y += 18
+		# quick help (moved to top-right of canvas, so no controls here)
 
 		# toggle button for showing/hiding the graph
 		btn_w = SIDEBAR_W - 24
 		btn_h = 28
 		btn_x = 12
-		btn_y = SCREEN_HEIGHT - 60
+		btn_y = SCREEN_HEIGHT - 200
 		self.toggle_button_rect = pygame.Rect(btn_x, btn_y, btn_w, btn_h)
 		btn_color = GREEN if self.show_graph else GRAY
 		pygame.draw.rect(screen, btn_color, self.toggle_button_rect)
@@ -437,6 +486,37 @@ class App:
 		tx = btn_x + 8
 		ty = btn_y + (btn_h - txt.get_height()) // 2
 		screen.blit(txt, (tx, ty))
+
+		# turn display section at bottom
+		y = SCREEN_HEIGHT - 160
+		pygame.draw.line(screen, BLACK, (12, y), (SIDEBAR_W - 12, y), 1)
+		y += 8
+		screen.blit(title_font.render('Turns', True, BLACK), (12, y))
+		y += 28
+		
+		# show turns in reverse (most recent first) if path exists
+		if self.astar and getattr(self.astar, 'path', None):
+			path = self.astar.path
+			turns = self.get_all_turns(path)
+			if turns:
+				# reverse turns list to show most recent first
+				turns_rev = list(reversed(turns))
+				turn_names = {0: 'Right', 1: 'Straight', 2: 'Left', 3: 'U-turn'}
+				# show current (first in reversed) and next (second in reversed)
+				for idx, turn_type in enumerate(turns_rev[:2]):
+					label = turn_names.get(turn_type, '?')
+					if idx == 0:
+						title_txt = 'Current: ' + label
+						color = GREEN
+					else:
+						title_txt = 'Next: ' + label
+						color = BLUE
+					screen.blit(font.render(title_txt, True, color), (12, y))
+					y += 22
+			else:
+				screen.blit(font.render('No turns yet', True, BLACK), (12, y))
+		else:
+			screen.blit(font.render('Run A* to see turns', True, BLACK), (12, y))
 
 	def draw_canvas(self):
 		# white background
@@ -454,10 +534,10 @@ class App:
 		if path:
 			pts = self.waypoints2path(samples=8)
 			if pts and len(pts) > 1:
-				pygame.draw.lines(screen, PURPLE, False, pts, max(3, int(6 * self.graph_scale)))
+				pygame.draw.lines(screen, BLUE, False, pts, max(3, int(6 * self.graph_scale)))
 		else:
-			# if show_graph True, draw full graph; otherwise show only selected start/end markers
-			if self.show_graph and self.graph:
+			# if show_graph True or A* is running, draw full graph; otherwise show only selected start/end markers
+			if (self.show_graph or (self.astar and getattr(self.astar, 'openSet', None) is not None)) and self.graph:
 				base_x = self.graph_offset_x + self.graph_extra_x
 				base_y = self.graph_offset_y + self.graph_extra_y
 				# edges
@@ -490,8 +570,8 @@ class App:
 					color = BLACK if getattr(s, 'isWall', False) else BLUE
 					pygame.draw.circle(screen, color, (x, y), max(1, int(s.size * self.graph_scale)))
 
-		# draw A* sets and path
-		if self.astar:
+		# draw A* sets and path (only when graph visible and a path exists)
+		if self.astar and self.show_graph and getattr(self.astar, 'path', None):
 			# open set
 			for s in getattr(self.astar, 'openSet', []):
 				try:
@@ -566,6 +646,14 @@ class App:
 				x += int(off[0]); y += int(off[1])
 				pygame.draw.circle(screen, YELLOW, (x, y), max(3, int(6 * self.graph_scale)), 2)
 
+		# draw control hints at top-right of canvas
+		y = 12
+		hints = ['UP/DOWN: select map', 'ENTER: load', 'Click: pick spot', 'G: toggle graph', 'R: reset']
+		for h in hints:
+			txt = font.render(h, True, DARK_GRAY)
+			screen.blit(txt, (SCREEN_WIDTH - 240, y))
+			y += 18
+
 	def run(self):
 		running = True
 		while running:
@@ -628,16 +716,18 @@ class App:
 										self.astar.update()
 									# after run, ensure we only display the path
 									self.show_graph = False
-
-			# draw
-			# update hover spot
-			mx, my = pygame.mouse.get_pos()
-			if mx > SIDEBAR_W:
-				spot, dist = self.find_nearest_spot(mx, my, max_radius=48)
-				self.hover_spot = spot
-			else:
-				self.hover_spot = None
-			# draw
+					# print turn array to console
+					path = getattr(self.astar, 'path', None)
+					if path:
+						turns = self.get_all_turns(path)
+						print(f"\n=== Path Generated ===")
+						print(f"Path length: {len(path)}")
+						print(f"Turn array: {turns}")
+						turn_names = {0: 'Right', 1: 'Straight', 2: 'Left', 3: 'U-turn'}
+						print("Turns (readable):")
+						for i, turn_type in enumerate(turns):
+							print(f"  Turn {i}: {turn_names.get(turn_type, '?')}")
+						print("=======================\n")
 			screen.fill(WHITE)
 			self.draw_sidebar()
 			self.draw_canvas()
