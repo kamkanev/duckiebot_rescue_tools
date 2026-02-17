@@ -293,14 +293,18 @@ def save_map_image(file_name):
                 map_surface.blit(grass_tile, (x * export_tile_size, y * export_tile_size))
 
         # draw road tiles within crop
+        road_mask = np.zeros((map_h, map_w), dtype=np.uint8)
         for y in range(min_y, max_y + 1):
             for x in range(min_x, max_x + 1):
                 tile = world_map[y][x]
                 if tile >= 0:
+                    px = (x - min_x) * export_tile_size + extra_px
+                    py = (y - min_y) * export_tile_size + extra_px
+                    road_mask[py:py + export_tile_size, px:px + export_tile_size] = 255
                     blitRotateCenter(
                         map_surface,
                         export_img_list[tile % TYLE_TYPES],
-                        ((x - min_x) * export_tile_size + extra_px, (y - min_y) * export_tile_size + extra_px),
+                        (px, py),
                         (tile // TYLE_TYPES) * 90
                     )
 
@@ -310,12 +314,13 @@ def save_map_image(file_name):
             rgb = pygame.surfarray.array3d(map_surface)  # (w, h, 3)
             rgb = np.transpose(rgb, (1, 0, 2))  # (h, w, 3)
             hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV).astype(np.float32)
-            # For yellow-ish hues, force into mask-friendly range
+            # For yellow-ish hues on the road, force into mask-friendly range
             h = hsv[..., 0]
             s = hsv[..., 1]
             v = hsv[..., 2]
             # broader hue window to catch rotated/anti-aliased yellow dashes
-            yellowish = (h >= 15) & (h <= 45) & (s >= 60) & (v >= 60)
+            road = road_mask > 0
+            yellowish = road & (h >= 15) & (h <= 45) & (s >= 60) & (v >= 60)
             h[yellowish] = 26
             s[yellowish] = np.clip(np.maximum(s[yellowish], 120), 0, 255)
             v[yellowish] = np.clip(np.maximum(v[yellowish], 100), 0, 255)

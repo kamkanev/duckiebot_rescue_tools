@@ -17,7 +17,7 @@ if img.ndim == 3 and img.shape[2] == 4:
     img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
 
 original = img.copy()
-draw_weights = True 
+draw_weights = False 
 dotRadius = 6
 
 #cropped image     
@@ -342,13 +342,14 @@ for point in turningPoints:
 def drawPoints(drawDown, x, y, img_height, top, left, right, down, checkPrevious):
     # Default bounds
     print("Left, Right, Top, Down")
-    print(f"{lastLeft,lastRight,lastTop,lastDown}")
-    print(f"{left, right, top, down}")
+    print(f"Last: {lastLeft,lastRight,lastTop,lastDown}")
+    print(f"normal: {left, right, top, down}")
 
     x_bound = 13
     y_bound = 13
     flip = False
     global flipped 
+    global sTurn
 
     firstNode_x = x - x_bound 
     lastNode_x = x + x_bound 
@@ -359,34 +360,22 @@ def drawPoints(drawDown, x, y, img_height, top, left, right, down, checkPrevious
     else:
         firstNode_y = y + y_bound
         lastNode_y = y - y_bound
-    
+
     if checkPrevious:
-        #cv2.circle(result,(x,y),dotRadius + 20,(0,0,255),1)
-        if(flipped == True):
-            print(f"Checking flip conditions... {flipped}")
-            if(top and left) and (lastRight and lastDown):
-                flipped = False
-            elif (right and down) and (lastTop and lastLeft):
-                flipped = False
-            elif (top and right) and (lastDown and lastLeft):
-                flipped = False
-            elif (down and left) and (lastTop and lastRight):
-                flipped = False
-        elif flipped == False:
-            print(f"Checking flip conditions... {flipped}")
-            if(top and left) and (lastRight and lastDown):
+        set1 = [lastLeft,lastRight,lastTop,lastDown]
+        set2 = [left,right,top,down]
+        val = sum(x==y for x,y in zip(set1,set2))
+        if val == 0:
+            if not flipped:
+                sTurn = True
                 flip = True
-                flipped = True
-            elif (right and down) and (lastTop and lastLeft):
-                flip = True
-                flipped = True
-            elif (top and right) and (lastDown and lastLeft):
-                flip = True
-                flipped = True
-            elif (down and left) and (lastTop and lastRight):
-                flip = True 
-                flipped = True
+            flipped = not flipped
+        elif val == 2:
+            sTurn = False
+            flip = flipped
+
     print(f"flip: {flip}")
+    flipped = flip
     type = ('inner', 'outer')
     color = ((0,255,0),(0,255,255))
 
@@ -398,7 +387,7 @@ def drawPoints(drawDown, x, y, img_height, top, left, right, down, checkPrevious
         cv2.circle(result, (firstNode_x, firstNode_y), dotRadius, color[i], -1)
         turningPointNodes.append({ # inner
         'point': (int(firstNode_x), int(firstNode_y)),
-        'to': (0,0),
+        'to': (0,0), 
         'type': type[i],
         'from': (0,0),
         'road': 0,
@@ -451,37 +440,44 @@ def drawPoints(drawDown, x, y, img_height, top, left, right, down, checkPrevious
         'down': down
         })
 
-def checkForTurningPoints(x,y,x_search,y_search,direction):
+def checkForTurningPoints(x,y,x_search,y_search,direction,bound,width2):
     hsv = cv2.cvtColor(cropped, cv2.COLOR_BGR2HSV)
     height, width = hsv.shape[:2]  # image dimensions
 
     if direction == 'left':
-        x_start = max(x - 85, 0)
+        x_start = max(x - bound, 0)
         x_end   = x                  # assuming x <= width
-        y_start = max(y - 8, 0)
-        y_end   = min(y + 8, height)
+        y_start = max(y - width2, 0)
+        y_end   = min(y + width2, height)
     elif direction == 'top':
-        x_start = max(x - 8, 0)
-        x_end   = min(x + 8, width)
-        y_start = max(y - 85, 0)
+        x_start = max(x - width2, 0)
+        x_end   = min(x + width2, width)
+        y_start = max(y - bound, 0)
         y_end   = y
     elif direction == 'right':
         x_start = x
-        x_end   = min(x + 85, cropped.shape[1])                 # assuming x <= width
-        y_start = max(y - 8, 0)
-        y_end   = min(y + 8, height)
+        x_end   = min(x + bound, cropped.shape[1])                 # assuming x <= width
+        y_start = max(y - width2, 0)
+        y_end   = min(y + width2, height)
     elif direction == 'down':
-        x_start = max(x - 8, 0)
-        x_end   = min(x + 8, width)
+        x_start = max(x - width2, 0)
+        x_end   = min(x + width2, width)
         y_start = y
-        y_end   = min(y + 85, cropped.shape[0])
+        y_end   = min(y + bound, cropped.shape[0])
     else:
         return False
     
     #cv2.rectangle(result,(x_start,y_start),(x_end,y_end),(0,0,255),1)
 
-    if(x_start < x_search < x_end) and (y_start < y_search < y_end):
+    if (x_start < x_search < x_end) and (y_start < y_search < y_end):
+        # skip if red is present between current point and candidate
+        red_mask = cv2.inRange(hsv, red_lower, red_upper)
+        line_mask = np.zeros_like(red_mask)
+        cv2.line(line_mask, (int(x), int(y)), (int(x_search), int(y_search)), 255, thickness=2)
+        if np.any(cv2.bitwise_and(line_mask, red_mask)):
+            return False
         return True
+    
     
 
 visited = set()
@@ -503,14 +499,18 @@ def reorder(turning_points, start=0, search=False):
             print(f"Started processing at index {i}")
 
             # Check each direction
+            found_any = False
             for direction in directions:
-                blocked = checkPlot(x, y, direction, 50)
+                blocked = checkPlot(x, y, direction, 50,10)
                 if not blocked:
                     for j, other_point in enumerate(turning_points):
                         ox, oy = int(other_point[0]), int(other_point[1])
-                        if checkForTurningPoints(x, y, ox, oy, direction) and ((ox,oy) not in visited):
+                        if checkForTurningPoints(x, y, ox, oy, direction,400,40) and ((ox,oy) not in visited):
                             print(f"Turning point found at index {j} in direction {direction}")
+                            found_any = True
                             reorder(turning_points, j, True)
+            if not found_any:
+                reordered.append((0, 0))
 
             # Continue the main iteration if this was the start
             if start == i:
@@ -520,7 +520,7 @@ def reorder(turning_points, start=0, search=False):
 
 
 
-def checkPlot(x,y, direction,bound):
+def checkPlot(x,y, direction,bound,width2):
     # Define search area based on direction
     hsv = cv2.cvtColor(cropped, cv2.COLOR_BGR2HSV)
     height, width = hsv.shape[:2]  # image dimensions
@@ -528,21 +528,21 @@ def checkPlot(x,y, direction,bound):
     if direction == 'left':
         x_start = max(x - bound - 10, 0)
         x_end   = x                  # assuming x <= width
-        y_start = max(y - 10, 0)
-        y_end   = min(y + 10, height)
+        y_start = max(y - width2, 0)
+        y_end   = min(y + width2, height)
     elif direction == 'top':
-        x_start = max(x - 10, 0)
-        x_end   = min(x + 10, width)
+        x_start = max(x - width2, 0)
+        x_end   = min(x + width2, width)
         y_start = max(y - bound - 10, 0)
         y_end   = y
     elif direction == 'right':
         x_start = x
         x_end   = min(x + bound + 10, cropped.shape[1])                 # assuming x <= width
-        y_start = max(y - 10, 0)
-        y_end   = min(y + 10, height)
+        y_start = max(y - width2, 0)
+        y_end   = min(y + width2, height)
     elif direction == 'down':
-        x_start = max(x - 10, 0)
-        x_end   = min(x + 10, width)
+        x_start = max(x - width2, 0)
+        x_end   = min(x + width2, width)
         y_start = y
         y_end   = min(y + bound + 10, cropped.shape[0])
     else:
@@ -563,26 +563,19 @@ def checkPlot(x,y, direction,bound):
 
 turningPoints = midTurningPoints.copy()
 
+
 turningPoints = [
     p for p in turningPoints
     if p is not None and len(p) == 2
 ]
-
 turningPoints = reorder(turningPoints)
-
-
-#Draw TurningPoints
-# for i, point in enumerate(turningPoints):
-#     y = int(point[1])
-#     x = int(point[0])
-
-#     cv2.circle(result,(x,y),(dotRadius),(0,0,255),-1)
 
 lastTop = False
 lastDown = False
 lastRight = False
 lastLeft = False
 flipped = False
+sTurn = False
 
 for i, point in enumerate(turningPoints):
     height, width = img.shape[:2]
@@ -590,54 +583,78 @@ for i, point in enumerate(turningPoints):
     x = int(point[0])
     y = int(point[1])
 
-    cv2.putText(result,str(i),(x,y),cv2.FONT_HERSHEY_SIMPLEX, 0.26,(0,0,0),1)
+
+    cv2.putText(result,str(i),(x,y),cv2.FONT_HERSHEY_SIMPLEX, 0.6,(255,255,255),1)
 
     flip = False
     rightCheck = None
     leftCheck = None
     topCheck = None
     downCheck = None
+    checkPrevious = True
 
-    top = checkPlot(x, y, 'top',50)
-    left = checkPlot(x, y, 'left',50)
-    right = checkPlot(x,y, 'right',50)
-    down = checkPlot(x,y,'down',50)
-
-    drawDown = (top and left) or (not top and not left)
-    print(f"Start Here: {left, right,top,down}")
-
-    #first check
-    if not left:
-        lastLeft = True
-        leftCheck = checkPlot(x,y,'left',85)
-    elif not right:
-        lastRight = True
-        rightCheck = checkPlot(x,y,'right',85)
-
-    #2nd check
-    if rightCheck or leftCheck:
-        if not top:
-            lastTop = True
-            topCheck = checkPlot(x, y, 'top',85)
-        elif not down:
-            lastDown = True
-            downCheck = checkPlot(x,y,'down',85)
-        
-    if(rightCheck or leftCheck):
-        checkPrevious = True
-    else:
+    if x == 0 and y == 0: 
+        checkPrevious = False
         lastTop = False
         lastDown = False
         lastRight = False
         lastLeft = False
-        checkPrevious = False
+        flipped = False
+        continue
 
+    print(f"Before: {lastLeft,lastRight,lastTop,lastDown}")   
+
+    top = checkPlot(x, y, 'top',50,10)
+    left = checkPlot(x, y, 'left',50,10)
+    right = checkPlot(x,y, 'right',50,10)
+    down = checkPlot(x,y,'down',50,10)
+
+    if(lastDown == False and lastTop == False and lastLeft == False and lastRight == False):
+        lastDown = down
+        lastLeft = left
+        lastRight = right
+        lastTop = top
+
+    drawDown = (top and left and not right and not down) or (not top and not left and down and right)
+
+    #first check
+    if not left:
+        leftCheck = checkPlot(x,y,'left',90,10)
+    if not right:
+        rightCheck = checkPlot(x,y,'right',90,10)
+    if not top:
+        topCheck = checkPlot(x,y,'top',90,10)
+    if not down:
+        downCheck = checkPlot(x,y,'down',100,10)
+
+    # #2nd check
+    # if rightCheck or leftCheck:
+    #     if not top:
+    #         topCheck = checkPlot(x, y, 'top',90,10)
+    #     elif not down:
+    #         downCheck = checkPlot(x,y,'down',90,10)
+
+    # values = [rightCheck,topCheck,downCheck,leftCheck,right,top,left,down]
+    # if sum(x is True for x in values) >= 3:
+
+    # if (rightCheck or leftCheck) or (topCheck or downCheck) or sTurn:
+    #     checkPrevious = True
+    # else:
+    #     checkPrevious = False
+
+    print(f"rightCheck: {rightCheck}")
+    print(f"leftCheck: {leftCheck}")
+    print(f"topCheck: {topCheck}")
+    print(f"downCheck: {downCheck}")
+    print(f"checkPrevious: {checkPrevious}")
+    print(f"Previous: {flipped}")
     drawPoints(drawDown, x,y, height, top, left, right, down, checkPrevious)
 
-    lastTop = False
-    lastDown = False
-    lastRight = False
-    lastLeft = False
+    lastDown = down
+    lastLeft = left
+    lastRight = right
+    lastTop = top
+
 
 print(f"Filtered to {len(yellowBlocks)} actual blocks (removed {len(contoursYel) - len(yellowBlocks)} small dots)")
 #------------------------------------------------------------
@@ -960,7 +977,7 @@ print("\n=== Creating Edges from Intersection Nodes ===")
 for intersection in intersectionNodes:
     int_x = intersection['x']
     int_y = intersection['y']
-    cv2.rectangle(result,(int_x-40,int_y-40),(int_x+40,int_y+34),(0,255,255),1)
+    #cv2.rectangle(result,(int_x-40,int_y-40),(int_x+40,int_y+34),(0,255,255),1)
     searchRadius = intersection['height'] + 10
     
     # Create a square search area with intersection as center
@@ -1048,7 +1065,7 @@ def direction_ok(node_x, node_y, x_search, y_search, dir_vec, min_dot=0.3):
 def findClose_withoutBorder(x_start, x_end, y_start, y_end, x_search, y_search,node_x, node_y, border_mask,dir_vec=0):
     if not (x_start <= x_search <= x_end and
         y_start <= y_search <= y_end):
-            return
+            return 
     # if not direction_ok(node_x,node_y,x_search,y_search,dir_vec):
     #         return 
     weight = calculate_distance(x_search, y_search, node_x, node_y)
@@ -1179,9 +1196,15 @@ for node in centerBlock:
                         y = int(point['point'][1])
 
                         crossed = findClose(square_x_start,square_x_end,square_y_start,square_y_end,x,y, node_x,node_y, resultBorder)
+                        crossed = findClose(square_x_start,square_x_end,square_y_start,square_y_end,x,y, node_x,node_y, resultBorder)
                         if(crossed):
-                            crossed_x = x
-                            crossed_y = y
+                            if(crossed_x == 0 and crossed_y == 0):
+                                crossed_x = x
+                                crossed_y = y
+                            else: 
+                                if calculate_distance(x,y,node_x,node_y) < calculate_distance(crossed_x,crossed_y,node_x,node_y):
+                                    crossed_x = x
+                                    crossed_y = y
                     #cv2.rectangle(result,(square_x_start, square_y_start),(square_x_end,square_y_end),(0,255,255),1)
                     if(crossed_x != 0):
                         findClose_withoutBorder(square_x_start,square_x_end,square_y_start,square_y_end,crossed_x,crossed_y,node_x,node_y,resultBorder)
@@ -1259,13 +1282,19 @@ for node in centerBlock:
 
                         crossed = findClose(square_x_start,square_x_end,square_y_start,square_y_end,x,y, node_x,node_y, resultBorder)
                         if(crossed):
-                            crossed_x = x
-                            crossed_y = y                   
+                            if(crossed_x == 0 and crossed_y == 0):
+                                crossed_x = x
+                                crossed_y = y
+                            else: 
+                                if calculate_distance(x,y,node_x,node_y) < calculate_distance(crossed_x,crossed_y,node_x,node_y):
+                                    crossed_x = x
+                                    crossed_y = y                 
                     #cv2.rectangle(result,(square_x_start,square_y_start),(square_x_end,square_y_end),(0,0,255),1)
                     if(crossed_x != 0):
                         findClose_withoutBorder(square_x_start,square_x_end,square_y_start,square_y_end,crossed_x,crossed_y, node_x,node_y, resultBorder)
                         #cv2.circle(result,(crossed_x,crossed_y),dotRadius + 20,(0,0,255),1)
                     if(foundNode['weight'] != 0):
+                        
                         marked = markPoint(foundNode['x'],foundNode['y'],turningPointNodes,node_x,node_y, 'to')
                         if(marked):
                             #print(f"Marked with {foundNode['x'],foundNode['y']}")
@@ -1371,11 +1400,17 @@ for node in centerBlock:
 
                         crossed = findClose(square_x_start,square_x_end,square_y_start,square_y_end,x,y, node_x,node_y, resultBorder)
                         if(crossed):
-                            crossed_x = x
-                            crossed_y = y
+                            if(crossed_x == 0 and crossed_y == 0):
+                                crossed_x = x
+                                crossed_y = y
+                            else: 
+                                if calculate_distance(x,y,node_x,node_y) < calculate_distance(crossed_x,crossed_y,node_x,node_y):
+                                    crossed_x = x
+                                    crossed_y = y
                     if(crossed_x != 0):
                         findClose_withoutBorder(square_x_start,square_x_end,square_y_start,square_y_end,crossed_x,crossed_y, node_x,node_y, resultBorder)
                     if(foundNode['weight'] != 0):
+                        #cv2.circle(result,(foundNode['x'],foundNode['y']),dotRadius + 20,(0,0,255),1)
                         marked = markPoint(foundNode['x'],foundNode['y'],turningPointNodes,node_x,node_y,'to')
                         if(marked):
                             edges.append({
@@ -1516,8 +1551,13 @@ for node in centerBlock:
 
                         crossed = findClose(square_x_start,square_x_end,square_y_start,square_y_end,x,y, node_x,node_y, resultBorder)
                         if(crossed):
-                            crossed_x = x
-                            crossed_y = y
+                            if(crossed_x == 0 and crossed_y == 0):
+                                crossed_x = x
+                                crossed_y = y
+                            else: 
+                                if calculate_distance(x,y,node_x,node_y) < calculate_distance(crossed_x,crossed_y,node_x,node_y):
+                                    crossed_x = x
+                                    crossed_y = y  
                     if(crossed_x != 0):
                     #comeback
                         #print(f"{crossed} at point {crossed_x,crossed_y} with weight {foundNode['weight']}")
@@ -1525,6 +1565,7 @@ for node in centerBlock:
                         #cv2.circle(result,(crossed_x,crossed_y),dotRadius + 20,(0,0,255),1)
                         #print(f"drawn")  
                     if(foundNode['weight'] != 0 ):
+                        
                         marked = markPoint(foundNode['x'],foundNode['y'],turningPointNodes,node_x,node_y,'to')
                         if(marked):
                             edges.append({
@@ -1595,8 +1636,13 @@ for verExt in verticalExtensionNodes:
 
             crossed = findClose(square_x_start,square_x_end,square_y_start,square_y_end,x,y, verExt_x,verExt_y, resultBorder)
             if(crossed):
-                crossed_x = x
-                crossed_y = y
+                            if(crossed_x == 0 and crossed_y == 0):
+                                crossed_x = x
+                                crossed_y = y
+                            else: 
+                                if calculate_distance(x,y,node_x,node_y) < calculate_distance(crossed_x,crossed_y,node_x,node_y):
+                                    crossed_x = x
+                                    crossed_y = y  
         if(crossed_x != 0):
             findClose_withoutBorder(square_x_start,square_x_end,square_y_start,square_y_end,crossed_x,crossed_y, verExt_x,verExt_y, resultBorder)
             #cv2.circle(result,(crossed_x,crossed_y),dotRadius + 20,(0,0,255),1)
@@ -1640,8 +1686,13 @@ for verExt in verticalExtensionNodes:
             crossed = findClose(square_x_start,square_x_end,square_y_start,square_y_end,x,y, verExt_x,verExt_y, resultBorder)
 
             if(crossed):
-                crossed_x = x
-                crossed_y = y
+                if(crossed_x == 0 and crossed_y == 0):
+                    crossed_x = x
+                    crossed_y = y
+                else: 
+                    if calculate_distance(x,y,node_x,node_y) < calculate_distance(crossed_x,crossed_y,node_x,node_y):
+                        crossed_x = x
+                        crossed_y = y  
         if(crossed_x != 0):
                 #print(f"{crossed} at point {crossed_x,crossed_y} with weight {foundNode['weight']}")
             findClose_withoutBorder(square_x_start,square_x_end,square_y_start,square_y_end,crossed_x,crossed_y, verExt_x,verExt_y, resultBorder)
@@ -1650,6 +1701,7 @@ for verExt in verticalExtensionNodes:
         if(foundNode['weight'] != 0):
             #cv2.circle(result,(foundNode['x'],foundNode['y']),dotRadius + 20,(0,0,255),1)
             #comeback
+            #cv2.circle(result,(foundNode['x'],foundNode['y']),dotRadius + 20,(0,0,255),1)
             marked = markPoint(foundNode['x'],foundNode['y'],turningPointNodes,verExt_x,verExt_y,'from')
             if(marked):
                 edges.append({
@@ -1673,7 +1725,7 @@ for verExt in verticalExtensionNodes:
 print("=== Creating Edges from Horizontal Extension Nodes to Turning Points ===")
 for horExt in horizontalExtensionNodes:
     if horExt['direction'] == 'left' and (horExt['to'] == (0,0)):
-        search_radius = (verExt['h'] // 2) + 5
+        search_radius = (verExt['h'] // 2) + 10
         horExt_x = horExt['x']
         horExt_y = horExt['y']
         crossed = False
@@ -1692,11 +1744,18 @@ for horExt in horizontalExtensionNodes:
             x = int(point['point'][0])
             y = int(point['point'][1])
             crossed = findClose(square_x_start,square_x_end,square_y_start,square_y_end,x,y, horExt_x,horExt_y, resultBorder)
-            if(crossed): crossed_x, crossed_y = x,y 
-        #comeback later 11/01 FIX THISSS PLEASE
+            if(crossed):
+                if(crossed_x == 0 and crossed_y == 0):
+                    crossed_x = x
+                    crossed_y = y
+                else: 
+                    if calculate_distance(x,y,node_x,node_y) < calculate_distance(crossed_x,crossed_y,node_x,node_y):
+                        crossed_x = x
+                        crossed_y = y  
         if(crossed_x != 0):
             findClose_withoutBorder(square_x_start,square_x_end,square_y_start,square_y_end,crossed_x,crossed_y, horExt_x,horExt_y, resultBorder)
         if(foundNode['weight'] != 0):
+
             marked = markPoint(foundNode['x'],foundNode['y'],turningPointNodes,horExt_x,horExt_y,'from')
             #print(f"{foundNode['x'],foundNode['y']}")
             #cv2.circle(result,(foundNode['x'],foundNode['y']),dotRadius + 20,(0,0,255),1)
@@ -1741,12 +1800,18 @@ for horExt in horizontalExtensionNodes:
             y = int(point['point'][1])
             crossed = findClose(square_x_start,square_x_end,square_y_start,square_y_end,x,y, horExt_x,horExt_y, resultBorder)
             if(crossed):
-                crossed_x = x
-                crossed_y = y
+                if(crossed_x == 0 and crossed_y == 0):
+                    crossed_x = x
+                    crossed_y = y
+                else: 
+                    if calculate_distance(x,y,node_x,node_y) < calculate_distance(crossed_x,crossed_y,node_x,node_y):
+                        crossed_x = x
+                        crossed_y = y  
         if(crossed_x != 0):
             findClose_withoutBorder(square_x_start,square_x_end,square_y_start,square_y_end,crossed_x,crossed_y,horExt_x,horExt_y,resultBorder)
         #cv2.circle(result,(foundNode['x'],foundNode['y']),dotRadius + 20,(0,0,255),1)
         if(foundNode['weight'] != 0):
+
             marked = markPoint(foundNode['x'],foundNode['y'],turningPointNodes,horExt_x,horExt_y,'from')
             if(marked):
                 edges.append({
@@ -1800,10 +1865,12 @@ print("\n=== Creating Edges from Turning Points ===")
 for i, node in enumerate(turningPointNodes):
     print(i)
     if(node['type'] == 'outer'):
+        cv2.putText(result,str(i),(node['point'][0],node['point'][1]),cv2.FONT_HERSHEY_SIMPLEX, 0.6,(0,255,255),1)
         counterO += 1
         print(f"Outer number {counterO}")
     if(node['type'] == 'inner'):
         counterI += 1
+        cv2.putText(result,str(i),(node['point'][0],node['point'][1]),cv2.FONT_HERSHEY_SIMPLEX, 0.6,(255,0,255),1)
         print(f"inner number {counterI}")
 
 for i, node in enumerate(turningPointNodes):
@@ -1814,15 +1881,20 @@ for i, node in enumerate(turningPointNodes):
     crossed = False
     check = []
     directionCheck = []
+    directionChecks = ['from', 'to']
     directions = ['top','down','left','right']
+    connected_x = 0
+    connected_y = 0
+    red_mask = cv2.inRange(hsv, red_lower, red_upper)
+    line_mask = np.zeros_like(red_mask)
     if(node['type'] == 'outer'):
         if(node['from'] == (0,0)) and node['to'] == (0,0): 
             directionCheck.append('to')
             directionCheck.append('from')
         elif(node['to'] == (0,0)) and (node['from'] != (0,0)):
-            directionCheck.append('from')
-        elif(node['from'] == (0,0)) and node['to'] != (0,0):
             directionCheck.append('to')
+        elif(node['from'] == (0,0)) and node['to'] != (0,0):
+            directionCheck.append('from')
 
         if(node['top'] == False):
             check.append('top')
@@ -1834,31 +1906,41 @@ for i, node in enumerate(turningPointNodes):
             check.append('down')
         for j in range(len(directionCheck)):
             for k in range (len(check)):
+                print(f"For point {i} at {node['point']} type {node['type']} searching {directionCheck[j]} in {check[k]}")
                 square_x_start,square_x_end,square_y_start,square_y_end = getTurningPointBoundary(node_x,node_y,check[k])
-                # cv2.rectangle(result,(square_x_start,square_y_start),(square_x_end,square_y_end),(0,0,255),1)
                 for point in turningPointNodes:
                     if(point['type'] == 'outer'):
-                        x = point['point'][0]
-                        y = point['point'][1]
-                        crossed = findClose(square_x_start,square_x_end,square_y_start,square_y_end,x,y, node_x,node_y, resultBorder)
-                        if(crossed):
-                            crossed_x = x
-                            crossed_y = y
+                        if(directionCheck[j] == 'from' and point['to'] == (0,0)) ^ (directionCheck[j] == 'to' and point['from'] == (0,0)):
+                            x = point['point'][0]
+                            y = point['point'][1]
+                            
+                            cv2.line(line_mask, (int(node_x), int(node_y)), (int(x), int(y)), 255, thickness=2)
+                            # if np.any(cv2.bitwise_and(line_mask, red_mask)):
+                            #     continue
+                            if x != connected_x and y != connected_y:
+                                crossed = findClose(square_x_start,square_x_end,square_y_start,square_y_end,x,y, node_x,node_y, resultBorder)
+                                if(crossed):
+                                    if(crossed_x == 0 and crossed_y == 0):
+                                        crossed_x = x
+                                        crossed_y = y
+                                    else: 
+                                        if calculate_distance(x,y,node_x,node_y) < calculate_distance(crossed_x,crossed_y,node_x,node_y):
+                                            crossed_x = x
+                                            crossed_y = y
                 if(crossed_x != 0):
                     findClose_withoutBorder(square_x_start,square_x_end,square_y_start,square_y_end,crossed_x,crossed_y, node_x,node_y, resultBorder)
                 if(foundNode['weight'] != 0):
-                    marked = markPoint(foundNode['x'],foundNode['y'],turningPointNodes,node_x,node_y,directionCheck[j])
+                    connected_x = foundNode['x']
+                    connected_y = foundNode['y']
+                    print(f"Found {directionCheck[j]} with point {foundNode['x'],foundNode['y']}")
+                    marked = markPoint(node_x,node_y,turningPointNodes,foundNode['x'],foundNode['y'],directionCheck[j])
                     if(marked):
+                        print(f"Arrow to be drawn with direction {directionCheck[j]}")
                         if(directionCheck[j] != 'from'): #from = (0,0)
-                            edges.append({
-                                'from': (int(foundNode['x']),int(foundNode['y'])),
-                                'to': (int(node_x),int(node_y)),
-                                'weight': int(foundNode['weight'])
-                            })
-                            node['from'] = (foundNode['x'],foundNode['y'])
-                            draw_arrow_with_weight(result,(foundNode['x'],foundNode['y']),(node_x,node_y),foundNode['weight'],(0,255,0),1)
-                            foundNode['weight'] = 0
-                        elif(directionCheck[j] != 'to'):
+                            print(directionCheck[j])
+                            for nextNode in turningPointNodes:
+                                if(nextNode['point'][0] == foundNode['x']) and (nextNode['point'][1] == foundNode['y']):
+                                    nextNode['from'] = (node_x,node_y)
                             edges.append({
                                 'from': (int(node_x),int(node_y)),
                                 'to': (int(foundNode['x']),int(foundNode['y'])),
@@ -1867,8 +1949,28 @@ for i, node in enumerate(turningPointNodes):
                             node['to'] = (foundNode['x'],foundNode['y'])
                             draw_arrow_with_weight(result,(node_x,node_y),(foundNode['x'],foundNode['y']),foundNode['weight'],(0,255,0),1)
                             foundNode['weight'] = 0
+                        elif(directionCheck[j] != 'to'):
+                            print(directionCheck[j])
+                            for nextNode in turningPointNodes:
+                                if(nextNode['point'][0] == foundNode['x']) and (nextNode['point'][1] == foundNode['y']):
+                                    nextNode['to'] = (node_x,node_y)
+                            edges.append({
+                                'from': (int(foundNode['x']),int(foundNode['y'])),
+                                'to': (int(node_x),int(node_y)),
+                                'weight': int(foundNode['weight'])
+                            })
+                            # cv2.circle(result,(node_x,node_y),dotRadius + 20,(0,255,0),1)
+                            # cv2.circle(result,(foundNode['x'],foundNode['y']),dotRadius + 20,(0,255,255),1)
+                            node['from'] = (foundNode['x'],foundNode['y'])
+                            draw_arrow_with_weight(result,(foundNode['x'],foundNode['y']),(node_x,node_y),foundNode['weight'],(0,255,0),1)
+                            foundNode['weight'] = 0
                         break
                 foundNode['weight'] = 0
+            crossed_x = 0
+            crossed_y = 0
+            foundNode['weight'] = 0
+        connected_x = 0
+        connected_y = 0
     elif(node['type'] == 'inner'):
         if(node['from'] == (0,0)) and node['to'] == (0,0): 
             directionCheck.append('to')
@@ -1888,44 +1990,59 @@ for i, node in enumerate(turningPointNodes):
             check.append('down')
         for j in range (len(directionCheck)):
             for k in range (len(check)):
-                print(f"Node No. {i} {node_x,node_y} has {len(directionCheck)} checks with {directionCheck[j]} at {check[k]}")
+                print(f"For point {i} at {node['point']} type {node['type']} searching {directionCheck[j]} in {check[k]}")
                 square_x_start,square_x_end,square_y_start,square_y_end = getTurningPointBoundary(node_x,node_y,check[k])
                 #cv2.rectangle(result,(square_x_start,square_y_start),(square_x_end,square_y_end),(0,0,255),1)
                 for point in turningPointNodes:
                     if(point['type'] == 'inner'):
-                        x = point['point'][0]
-                        y = point['point'][1]
-                        crossed = findClose(square_x_start,square_x_end,square_y_start,square_y_end,x,y, node_x,node_y, resultBorder)
-                        if(crossed):
-                            crossed_x = x
-                            crossed_y = y
+                            x = point['point'][0]
+                            y = point['point'][1]
+                            
+                            if x != connected_x and y != connected_y:
+                                crossed = findClose(square_x_start,square_x_end,square_y_start,square_y_end,x,y, node_x,node_y, resultBorder)
+                                if(crossed):
+                                    if(crossed_x == 0 and crossed_y == 0):
+                                        crossed_x = x
+                                        crossed_y = y
+                                    else: 
+                                        if calculate_distance(x,y,node_x,node_y) < calculate_distance(crossed_x,crossed_y,node_x,node_y):
+                                            crossed_x = x
+                                            crossed_y = y
                 if(crossed_x != 0):
                     findClose_withoutBorder(square_x_start,square_x_end,square_y_start,square_y_end,crossed_x,crossed_y, node_x,node_y, resultBorder)
                 if(foundNode['weight'] != 0):
+                    connected_x = foundNode['x']
+                    connected_y = foundNode['y']
+                    print(f"Found {directionCheck[j]} with point {foundNode['x'],foundNode['y']}")
+
                     marked = markPoint(foundNode['x'],foundNode['y'],turningPointNodes,node_x,node_y,directionCheck[j])
                     if(marked):
                         if(directionCheck[j] != 'from'): #from = (0,0)
+                            print(directionCheck[j])
                             edges.append({
                                 'from': (int(foundNode['x']),int(foundNode['y'])),
                                 'to': (int(node_x),int(node_y)),
                                 'weight': int(foundNode['weight'])
                             })
                             node['from'] = (foundNode['x'],foundNode['y'])
-                            print("drawn from")
                             draw_arrow_with_weight(result,(foundNode['x'],foundNode['y']),(node_x,node_y),foundNode['weight'],(0,255,0),1)
                             foundNode['weight'] = 0
                         elif(directionCheck[j] != 'to'):
+                            print(directionCheck[j])
                             edges.append({
                                 'from': (int(node_x),int(node_y)),
                                 'to': (int(foundNode['x']),int(foundNode['y'])),
                                 'weight': int(foundNode['weight'])
                             })
                             node['to'] = (foundNode['x'],foundNode['y'])
-                            print("drawn to")
                             draw_arrow_with_weight(result,(node_x,node_y),(foundNode['x'],foundNode['y']),foundNode['weight'],(0,255,0),1)
                             foundNode['weight'] = 0
                         break
-                foundNode['weight'] = 0
+                foundNode['weight'] = 0 
+            foundNode['weight'] = 0
+        connected_x = 0
+        connected_y = 0
+
 
 
 edgeData = []
@@ -1973,6 +2090,7 @@ for i, edge in enumerate(edges):
     if edge['from'] not in visited:
         visited.append(edge['from'])
         neighbors.append([edge['to']])
+        weights.append([edge['weight']])
         mapping.append((edge['from'],j))
         spots.append({
             'x': edge['from'][0],
@@ -1982,6 +2100,7 @@ for i, edge in enumerate(edges):
     else:
         for m in mapping:
             if m[0] == edge['from']:
+                weights[m[1]].append(edge['weight'])
                 neighbors[m[1]].append(edge['to'])
 
 print("---------- spots -------------")
@@ -1995,6 +2114,14 @@ for n in neighbors:
             if m[0] == x:
                 n[i] = m[1]
     print(n)
+
+print("---------- weight -------------")
+for w in weights:
+    for i, x in enumerate(w):
+        for m in mapping:
+            if m[0] == x:
+                w[i] = m[1]
+    print(w)
 
 print("---------- mapping -------------")
 for m in mapping:
