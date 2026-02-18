@@ -22,6 +22,8 @@ except Exception as e:
 	AStarGraph = None
 	AStar = None
 
+from llm.route_instructions import parse_text_to_steps, write_turns_bin
+
 pygame.init()
 
 # Window layout
@@ -41,6 +43,7 @@ GREEN = (0, 200, 0)
 BLUE = (0, 120, 255)
 YELLOW = (255, 200, 0)
 PURPLE = (138, 43, 226)
+ORANGE = (255, 165, 0)
 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption('Map + Graph Viewer')
@@ -85,6 +88,18 @@ class App:
 
 		# turn list scroll offset for sidebar
 		self.turns_scroll = 0
+
+		# Chat/LLM route input state
+		self.text_path = []
+		self.chat_active = False
+		self.chat_text = ""
+		self.chat_caret = 0
+		self.chat_view_start = 0
+		self.chat_message = ""
+		self.chat_message_timer = 0
+		self.caret_blink_ms = 500
+		self.caret_visible = True
+		self.last_caret_toggle = pygame.time.get_ticks()
 
 	def _get_available_graphs(self):
 		graphs = []
@@ -228,6 +243,7 @@ class App:
 
 			# reset turns scroll when loading a new graph
 			self.turns_scroll = 0
+			self.text_path = []
 
 			# snap spots to image roads for visual alignment
 			if self.image is not None and self.graph is not None:
@@ -420,6 +436,12 @@ class App:
 		self.algorithm_running = False
 		self.algorithm_done = False
 		self.turns_scroll = 0
+		self.text_path = []
+		self.chat_text = ""
+		self.chat_caret = 0
+		self.chat_view_start = 0
+		self.chat_message = ""
+		self.chat_message_timer = 0
 
 	def is_crossroad(self, waypoint, path):
 		"""Check if a waypoint is a crossroad (>2 neighbors)."""
@@ -481,6 +503,250 @@ class App:
 				turn_type = self.get_turn_type(i, path)
 				turns.append(turn_type)
 		return turns
+
+	def _chat_rect(self):
+		return pygame.Rect(10, SCREEN_HEIGHT - 80, SIDEBAR_W - 20, 30)
+
+	def _text_width(self, text):
+		return font.size(text)[0]
+
+	def _wrap_text(self, text, max_width):
+		words = text.split()
+		if not words:
+			return [""]
+		lines = []
+		current = words[0]
+		for word in words[1:]:
+			candidate = current + " " + word
+			if self._text_width(candidate) <= max_width:
+				current = candidate
+			else:
+				lines.append(current)
+				current = word
+		lines.append(current)
+		return lines
+
+	def _prompt_caret_index(self, prompt):
+		if prompt.startswith("Chat: "):
+			return len("Chat: ") + self.chat_caret
+		return len(prompt)
+
+	def _fit_text_to_width(self, text, max_width):
+		if self._text_width(text) <= max_width:
+			self.chat_view_start = 0
+			return text, 0
+		start = min(self.chat_view_start, len(text))
+		end = len(text)
+		while self._text_width(text[start:end]) > max_width and end > start:
+			end -= 1
+		self.chat_view_start = start
+		return text[start:end], start
+
+	def _ensure_caret_visible(self):
+		prompt = "Chat: " + self.chat_text
+		caret_index = self._prompt_caret_index(prompt)
+		max_width = self._chat_rect().width - 12
+		if self._text_width(prompt) <= max_width:
+			self.chat_view_start = 0
+			return
+		if caret_index < self.chat_view_start:
+			self.chat_view_start = caret_index
+		while self._text_width(prompt[self.chat_view_start:caret_index]) > max_width and self.chat_view_start < caret_index:
+			self.chat_view_start += 1
+		while self.chat_view_start > 0 and self._text_width(prompt[self.chat_view_start - 1:]) <= max_width:
+			self.chat_view_start -= 1
+
+	def _set_caret_from_click(self, x):
+		chat_box = self._chat_rect()
+		prompt = "Chat: " + self.chat_text
+		rendered, start_idx = self._fit_text_to_width(prompt, chat_box.width - 12)
+		rel_x = max(0, x - (chat_box.x + 6))
+		caret_in_render = 0
+		for i in range(len(rendered) + 1):
+			if self._text_width(rendered[:i]) >= rel_x:
+				caret_in_render = i
+				break
+		else:
+			caret_in_render = len(rendered)
+		caret_abs = start_idx + caret_in_render
+		self.chat_caret = max(0, min(len(self.chat_text), caret_abs - len("Chat: ")))
+
+	def _load_turns_from_file(self, filepath):
+		try:
+			with open(filepath, "rb") as f:
+				return list(f.read())
+		except Exception as e:
+			self.chat_message = f"Error reading turns.bin: {e}"
+			self.chat_message_timer = pygame.time.get_ticks()
+			return []
+
+	def _angle_between(self, ax, ay, bx, by):
+		ang = math.degrees(math.atan2(ay, ax) - math.atan2(by, bx))
+		return (ang + 180) % 360 - 180
+
+	def _neighbors_sorted(self, spot):
+		return sorted(spot.neighbors, key=lambda s: (s.position.x, s.position.y))
+
+	def _is_uturn_distance(self, prev_spot, next_spot, threshold=30):
+		if self.astar:
+			return self.astar._distance(prev_spot, next_spot) < threshold
+		dx = next_spot.position.x - prev_spot.position.x
+		dy = next_spot.position.y - prev_spot.position.y
+		return (dx * dx + dy * dy) ** 0.5 < threshold
+
+	def _turn_code(self, prev_spot, curr_spot, next_spot):
+		fx = next_spot.position.x - curr_spot.position.x
+		fy = next_spot.position.y - curr_spot.position.y
+		nx = prev_spot.position.x - curr_spot.position.x
+		ny = prev_spot.position.y - curr_spot.position.y
+		ang = self._angle_between(ny, nx, fy, fx)
+		if abs(ang) < 30:
+			return 1
+		if ang > 0:
+			return 3 if self._is_uturn_distance(prev_spot, next_spot) else 2
+		return 0 if self._is_uturn_distance(prev_spot, next_spot) else 1
+
+	def _pick_by_turn(self, prev_spot, curr_spot, candidates, turn_code):
+		if prev_spot is None:
+			return candidates[0] if candidates else None
+		matching = [n for n in candidates if self._turn_code(prev_spot, curr_spot, n) == turn_code]
+		if matching:
+			return matching[0]
+		fx = curr_spot.position.x - prev_spot.position.x
+		fy = curr_spot.position.y - prev_spot.position.y
+		best = None
+		best_score = None
+		for n in candidates:
+			nx = n.position.x - curr_spot.position.x
+			ny = n.position.y - curr_spot.position.y
+			ang = self._angle_between(ny, nx, fy, fx)
+			if turn_code == 1:
+				score = abs(ang)
+			elif turn_code == 2:
+				score = -ang if ang > 0 else float("inf")
+			elif turn_code == 0:
+				score = ang if ang < 0 else float("inf")
+			else:
+				score = abs(abs(ang) - 180)
+			if best is None or score < best_score:
+				best = n
+				best_score = score
+		return best
+
+	def _build_path_from_turns(self, turns_start_to_end):
+		if not self.start_spot or not self.graph:
+			return []
+
+		def walk_from(first_neighbor):
+			path = [self.start_spot, first_neighbor]
+			prev = self.start_spot
+			curr = first_neighbor
+			turns = list(turns_start_to_end)
+			steps = 0
+			max_steps = len(self.graph.spots) * 4
+
+			while steps < max_steps:
+				steps += 1
+				neighbors = [n for n in self._neighbors_sorted(curr) if not n.isWall]
+				if len(neighbors) == 0:
+					break
+
+				if len(neighbors) == 2 and prev in neighbors:
+					nxt = neighbors[0] if neighbors[1] is prev else neighbors[1]
+					path.append(nxt)
+					prev, curr = curr, nxt
+					continue
+
+				if len(neighbors) > 2 and turns:
+					turn = turns.pop(0)
+					candidates = neighbors if turn == 3 else ([n for n in neighbors if n is not prev] or neighbors)
+					nxt = self._pick_by_turn(prev, curr, candidates, turn)
+				else:
+					if prev is None:
+						nxt = neighbors[0]
+					else:
+						candidates = [n for n in neighbors if n is not prev]
+						if not candidates:
+							break
+						nxt = self._pick_by_turn(prev, curr, candidates, 1)
+
+				if nxt is None:
+					break
+				path.append(nxt)
+				prev, curr = curr, nxt
+
+				if not turns and len(curr.neighbors) <= 1:
+					break
+
+			# After consuming all turns, append one more neighbor if possible
+			if not turns and len(path) >= 2:
+				prev = path[-2]
+				curr = path[-1]
+				neighbors = [n for n in self._neighbors_sorted(curr) if not n.isWall]
+				candidates = [n for n in neighbors if n is not prev]
+				if not candidates and neighbors:
+					candidates = neighbors
+				if candidates:
+					nxt = self._pick_by_turn(prev, curr, candidates, 1) or candidates[0]
+					if nxt is not prev:
+						path.append(nxt)
+
+			return path, turns
+
+		neighbors = [n for n in self._neighbors_sorted(self.start_spot) if not n.isWall]
+		if not neighbors:
+			return [self.start_spot]
+
+		if not turns_start_to_end:
+			path, _ = walk_from(neighbors[0])
+		else:
+			best = None
+			for n in neighbors:
+				candidate_path, remaining = walk_from(n)
+				consumed = len(turns_start_to_end) - len(remaining)
+				score = (consumed, len(candidate_path))
+				if best is None or score > best[0]:
+					best = (score, candidate_path)
+			path = best[1] if best else [self.start_spot, neighbors[0]]
+
+		return list(reversed(path))
+
+	def _build_text_path_from_turns(self, filepath):
+		turns_reversed = self._load_turns_from_file(filepath)
+		turns_start_to_end = list(reversed(turns_reversed))
+		return self._build_path_from_turns(turns_start_to_end)
+
+	def _submit_chat(self):
+		text = self.chat_text.strip()
+		if not text:
+			return
+		if not self.start_spot:
+			self.chat_message = "Select a START point first."
+			self.chat_message_timer = pygame.time.get_ticks()
+			return
+
+		steps, clarification = parse_text_to_steps(text)
+		if clarification:
+			self.chat_message = clarification
+			self.chat_message_timer = pygame.time.get_ticks()
+			return
+
+		try:
+			write_turns_bin(steps, os.path.join(repo_root, "turns.bin"))
+			self.chat_message = f"Wrote turns.bin: {steps}"
+			self.chat_message_timer = pygame.time.get_ticks()
+			self.astar = None
+			self.end_spot = None
+			self.algorithm_running = False
+			self.algorithm_done = False
+			self.text_path = self._build_text_path_from_turns(os.path.join(repo_root, "turns.bin"))
+			self.chat_text = ""
+			self.chat_caret = 0
+			self.chat_view_start = 0
+		except Exception as e:
+			self.chat_message = f"Write failed: {e}"
+			self.chat_message_timer = pygame.time.get_ticks()
+			self.text_path = []
 
 	def draw_sidebar(self):
 		# background
@@ -560,6 +826,29 @@ class App:
 		else:
 			screen.blit(font.render('Run A* to see turns', True, BLACK), (12, y))
 
+		# Chat input area
+		chat_box = self._chat_rect()
+		pygame.draw.rect(screen, LIGHT_GRAY, chat_box)
+		pygame.draw.rect(screen, DARK_GRAY, chat_box, 2 if self.chat_active else 1)
+		prompt = "Chat: " + self.chat_text
+		if not self.chat_text and not self.chat_active:
+			prompt = "Chat: type route (requires 'start')"
+		rendered, start_idx = self._fit_text_to_width(prompt, chat_box.width - 12)
+		chat_text = font.render(rendered, True, BLACK)
+		screen.blit(chat_text, (chat_box.x + 6, chat_box.y + 6))
+
+		if self.chat_active and self.caret_visible:
+			caret_x = chat_box.x + 6 + self._text_width(rendered[:self._prompt_caret_index(prompt) - start_idx])
+			caret_y = chat_box.y + 6
+			caret_h = font.get_height()
+			pygame.draw.line(screen, BLACK, (caret_x, caret_y), (caret_x, caret_y + caret_h), 1)
+
+		if self.chat_message:
+			lines = self._wrap_text(self.chat_message, chat_box.width - 12)
+			for i, line in enumerate(lines[:2]):
+				msg = font.render(line, True, BLUE)
+				screen.blit(msg, (chat_box.x + 6, chat_box.y - 18 - (len(lines[:2]) - 1 - i) * 16))
+
 	def draw_canvas(self):
 		# white background
 		pygame.draw.rect(screen, WHITE, (SIDEBAR_W, 0, SCREEN_WIDTH - SIDEBAR_W, SCREEN_HEIGHT))
@@ -577,6 +866,16 @@ class App:
 			pts = self.waypoints2path(samples=8)
 			if pts and len(pts) > 1:
 				pygame.draw.lines(screen, BLUE, False, pts, max(3, int(6 * self.graph_scale)))
+		elif self.text_path:
+			# draw text-driven path if available
+			for i in range(len(self.text_path) - 1):
+				a = self.text_path[i]
+				b = self.text_path[i + 1]
+				x1 = int(a.position.x * self.graph_scale + self.graph_offset_x + self.graph_extra_x)
+				y1 = int(a.position.y * self.graph_scale + self.graph_offset_y + self.graph_extra_y)
+				x2 = int(b.position.x * self.graph_scale + self.graph_offset_x + self.graph_extra_x)
+				y2 = int(b.position.y * self.graph_scale + self.graph_offset_y + self.graph_extra_y)
+				pygame.draw.line(screen, ORANGE, (x1, y1), (x2, y2), 3)
 		else:
 			# if show_graph True or A* is running, draw full graph; otherwise show only selected start/end markers
 			if (self.show_graph or (self.astar and getattr(self.astar, 'openSet', None) is not None)) and self.graph:
@@ -704,6 +1003,32 @@ class App:
 				if ev.type == pygame.QUIT:
 					running = False
 				elif ev.type == pygame.KEYDOWN:
+					if self.chat_active:
+						if ev.key == pygame.K_RETURN:
+							self._submit_chat()
+						elif ev.key == pygame.K_BACKSPACE:
+							if self.chat_caret > 0:
+								self.chat_text = self.chat_text[:self.chat_caret - 1] + self.chat_text[self.chat_caret:]
+								self.chat_caret -= 1
+								self._ensure_caret_visible()
+						elif ev.key == pygame.K_LEFT:
+							if self.chat_caret > 0:
+								self.chat_caret -= 1
+								self._ensure_caret_visible()
+						elif ev.key == pygame.K_RIGHT:
+							if self.chat_caret < len(self.chat_text):
+								self.chat_caret += 1
+								self._ensure_caret_visible()
+						else:
+							if ev.unicode and len(self.chat_text) < 120:
+								self.chat_text = (
+									self.chat_text[:self.chat_caret]
+									+ ev.unicode
+									+ self.chat_text[self.chat_caret:]
+								)
+								self.chat_caret += 1
+								self._ensure_caret_visible()
+						continue
 					if ev.key == pygame.K_ESCAPE:
 						running = False
 					elif ev.key == pygame.K_UP:
@@ -759,6 +1084,13 @@ class App:
 					if mx <= SIDEBAR_W and getattr(self, 'toggle_button_rect', None) and self.toggle_button_rect.collidepoint(mx, my):
 						self.show_graph = not self.show_graph
 						continue
+					if self._chat_rect().collidepoint(mx, my):
+						self.chat_active = True
+						self._set_caret_from_click(mx)
+						self._ensure_caret_visible()
+						continue
+					else:
+						self.chat_active = False
 					if mx > SIDEBAR_W:
 						# canvas click: pick nearest spot within a reasonable radius
 						spot, dist = self.find_nearest_spot(mx, my, max_radius=80)
@@ -790,6 +1122,17 @@ class App:
 			screen.fill(WHITE)
 			self.draw_sidebar()
 			self.draw_canvas()
+			# Clear transient chat message after 4 seconds
+			if self.chat_message_timer:
+				if pygame.time.get_ticks() - self.chat_message_timer > 4000:
+					self.chat_message = ""
+					self.chat_message_timer = 0
+
+			if self.chat_active:
+				now = pygame.time.get_ticks()
+				if now - self.last_caret_toggle > self.caret_blink_ms:
+					self.caret_visible = not self.caret_visible
+					self.last_caret_toggle = now
 			pygame.display.flip()
 
 		pygame.quit()
@@ -798,4 +1141,3 @@ class App:
 if __name__ == '__main__':
 	app = App()
 	app.run()
-

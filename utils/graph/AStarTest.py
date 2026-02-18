@@ -616,8 +616,8 @@ class GraphVisualizer:
     def _neighbors_sorted(self, spot):
         return sorted(spot.neighbors, key=lambda s: (s.position.x, s.position.y))
 
-    def _turn_code_like_astar(self, prev_spot, curr_spot, next_spot):
-        # Mirror print_directions() logic for turn coding
+    def _turn_code(self, prev_spot, curr_spot, next_spot):
+        # Shared turn coding logic for path reconstruction and debug output
         fx = next_spot.position.x - curr_spot.position.x
         fy = next_spot.position.y - curr_spot.position.y
         nx = prev_spot.position.x - curr_spot.position.x
@@ -626,21 +626,22 @@ class GraphVisualizer:
         if abs(ang) < 30:
             return 1
         if ang > 0:
-            return 3 if self.is_Uturn_node(prev_spot, next_spot) else 2
-        return 0 if self.is_Uturn_node(prev_spot, next_spot) else 1
+            return 3 if self._is_uturn_distance(prev_spot, next_spot) else 2
+        return 0 if self._is_uturn_distance(prev_spot, next_spot) else 1
 
-    def is_Uturn_node(self, prev_spot, next_spot):
-        # Match is_Uturn distance rule without requiring astar.path indices
-        return self.astar._distance(prev_spot, next_spot) < 30 if self.astar else (
-            ((next_spot.position.x - prev_spot.position.x) ** 2 +
-             (next_spot.position.y - prev_spot.position.y) ** 2) ** 0.5 < 30
-        )
+    def _is_uturn_distance(self, prev_spot, next_spot, threshold=30):
+        # Shared distance rule for U-turn detection
+        if self.astar:
+            return self.astar._distance(prev_spot, next_spot) < threshold
+        dx = next_spot.position.x - prev_spot.position.x
+        dy = next_spot.position.y - prev_spot.position.y
+        return (dx * dx + dy * dy) ** 0.5 < threshold
 
     def _pick_by_turn(self, prev_spot, curr_spot, candidates, turn_code):
         if prev_spot is None:
             return candidates[0] if candidates else None
 
-        matching = [n for n in candidates if self._turn_code_like_astar(prev_spot, curr_spot, n) == turn_code]
+        matching = [n for n in candidates if self._turn_code(prev_spot, curr_spot, n) == turn_code]
         if matching:
             return matching[0]
 
@@ -712,6 +713,19 @@ class GraphVisualizer:
 
                 if not turns and len(curr.neighbors) <= 1:
                     break
+
+            # After consuming all turns, add one more neighbor if possible
+            if not turns and len(path) >= 2:
+                prev = path[-2]
+                curr = path[-1]
+                neighbors = [n for n in self._neighbors_sorted(curr) if not n.isWall]
+                candidates = [n for n in neighbors if n is not prev]
+                if not candidates and neighbors:
+                    candidates = neighbors
+                if candidates:
+                    nxt = self._pick_by_turn(prev, curr, candidates, 1) or candidates[0]
+                    if nxt is not prev:
+                        path.append(nxt)
 
             return path, turns
 
@@ -918,23 +932,7 @@ class GraphVisualizer:
         ang = math.degrees(math.atan2(ny, nx) - math.atan2(fy, fx))
         ang = (ang + 180) % 360 - 180  # normalize to [-180, 180]
 
-        if abs(ang) < 30:
-            rel = "ahead"
-            return 1
-        elif ang > 0:
-            rel = "left"
-            if self.is_Uturn(waypoint, path):
-                rel = "U-turn"
-                return 3
-            else:
-                return 2
-        else:
-            rel = "ahead"
-            if self.is_Uturn(waypoint, path):
-                rel = "right"
-                return 0
-            else:
-                return 1
+        return self._turn_code(path[waypoint - 1], cur, nxt)
 
         # print(f"Neighbor at ({n.position.x}, {n.position.y}) -> {rel} (angle {ang:.1f}°, cross {cross:.1f})")
             
@@ -947,18 +945,12 @@ class GraphVisualizer:
                 print("DEBUG: Checking U-turn at waypoint", waypoint)
                 print("----------------------------------")
                 print(f"Distance: {self.astar._distance(path[waypoint - 1], path[waypoint + 1])}")
-                if self.astar._distance(path[waypoint - 1], path[waypoint + 1]) < 30:
+                if self._is_uturn_distance(path[waypoint - 1], path[waypoint + 1]):
                     print("U turn true")
                     return True
             
         return False
     
-    def checkforUturn(self, path):
-        for i in range(1, len(path) - 1):
-            if self.is_Uturn(i, path):
-                return True
-        return False
-
     def reset_pathfinding(self):
         """Reset pathfinding"""
         if self.graph:

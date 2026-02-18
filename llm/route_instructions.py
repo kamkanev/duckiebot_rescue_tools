@@ -98,6 +98,7 @@ def parse_text_to_steps(text: str) -> Tuple[Optional[List[int]], Optional[str]]:
     # Example: "before left and right turn perform a uturn" => uturn, left, right.
     before_match = re.search(r"\bbefore\b", text.lower())
     if before_match:
+        pre_before = text[:before_match.start()].strip()
         after_before = text[before_match.end():].strip()
         # Split at the first action verb to separate the "before" clause
         verb_match = re.search(r"\b(perform|do|take|execute|go)\b", after_before, re.IGNORECASE)
@@ -107,9 +108,10 @@ def parse_text_to_steps(text: str) -> Tuple[Optional[List[int]], Optional[str]]:
         else:
             before_clause = after_before
             after_clause = ""
+        pre_steps = _extract_steps(pre_before)
         after_steps = _extract_steps(after_clause)
         before_steps = _extract_steps(before_clause)
-        steps = after_steps + before_steps
+        steps = pre_steps + after_steps + before_steps
     else:
         steps = _extract_steps(text)
 
