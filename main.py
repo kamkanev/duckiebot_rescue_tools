@@ -83,6 +83,9 @@ class App:
 		self.graph_extra_x = 0
 		self.graph_extra_y = 0
 
+		# turn list scroll offset for sidebar
+		self.turns_scroll = 0
+
 	def _get_available_graphs(self):
 		graphs = []
 		if os.path.isdir(self.saves_dir):
@@ -222,6 +225,9 @@ class App:
 			self.astar = None
 			self.algorithm_running = False
 			self.algorithm_done = False
+
+			# reset turns scroll when loading a new graph
+			self.turns_scroll = 0
 
 			# snap spots to image roads for visual alignment
 			if self.image is not None and self.graph is not None:
@@ -413,6 +419,7 @@ class App:
 		self.end_spot = None
 		self.algorithm_running = False
 		self.algorithm_done = False
+		self.turns_scroll = 0
 
 	def is_crossroad(self, waypoint, path):
 		"""Check if a waypoint is a crossroad (>2 neighbors)."""
@@ -530,6 +537,24 @@ class App:
 						color = BLUE
 					screen.blit(font.render(title_txt, True, color), (12, y))
 					y += 22
+				# remaining turns (if any) show below in black, with scrolling
+				remaining = turns_rev[2:]
+				line_h = 20
+				# available vertical space for remaining turns
+				avail_h = (SCREEN_HEIGHT - y - 12)
+				max_lines = max(0, avail_h // line_h)
+				# clamp scroll
+				if max_lines == 0:
+					self.turns_scroll = 0
+				else:
+					max_scroll = max(0, len(remaining) - max_lines)
+					self.turns_scroll = max(0, min(self.turns_scroll, max_scroll))
+				start_idx = self.turns_scroll
+				visible = remaining[start_idx:start_idx + max_lines]
+				for t in visible:
+					label = turn_names.get(t, '?')
+					screen.blit(font.render(label, True, BLACK), (12, y))
+					y += line_h
 			else:
 				screen.blit(font.render('No turns yet', True, BLACK), (12, y))
 		else:
@@ -711,6 +736,23 @@ class App:
 					elif ev.key == pygame.K_RIGHTBRACKET:
 						self.graph_extra_x += 10
 
+				# mouse wheel events: pygame 2 uses MOUSEWHEEL, older versions use button 4/5
+				elif ev.type == pygame.MOUSEWHEEL:
+					mx, my = pygame.mouse.get_pos()
+					if mx <= SIDEBAR_W:
+						# ev.y: positive means scroll up, negative scroll down
+						self.turns_scroll = max(0, self.turns_scroll - ev.y)
+					continue
+				elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button in (4, 5):
+					# legacy wheel: 4=up, 5=down
+					mx, my = ev.pos
+					if mx <= SIDEBAR_W:
+						if ev.button == 4:
+							self.turns_scroll = max(0, self.turns_scroll - 1)
+						else:
+							self.turns_scroll = self.turns_scroll + 1
+						# don't clamp here; draw_sidebar will clamp to valid range
+					continue
 				elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
 					mx, my = ev.pos
 					# check sidebar toggle button first

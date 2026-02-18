@@ -213,8 +213,8 @@ class AStar:
 
                 if curr == self.end:
 
-                    print(self.path)
-                    print("Done")
+                    # print(self.path)
+                    # print("Done")
                     self.isDone = True
                 
                 Utils.removeFromArray(self.openSet, curr)
