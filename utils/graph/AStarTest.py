@@ -81,6 +81,10 @@ class GraphVisualizer:
 
         pygame.key.set_repeat(300, 30)
         
+        # turns streaming state
+        self.turns_stream_path = os.path.join(repo_root, "turns.bin")
+        self._turns_written = 0
+        
     def _get_available_graphs(self):
         """Get list of available saved graphs"""
         saves_dir = os.path.join(repo_root, 'mapeditor', 'saves')
@@ -200,16 +204,44 @@ class GraphVisualizer:
         """Run one step of A* algorithm"""
         if self.astar and not self.algorithm_done:
             self.astar.update()
+            # compute turns for current path and stream any newly discovered turns
+            if not self.astar.noSolution and self.astar.path:
+                self.crossroads = self.get_all_crossroads(self.astar.path)
+                turns_list = self.get_all_turns(self.crossroads, self.astar.path)
+                if len(turns_list) > self._turns_written:
+                    new_turns = turns_list[self._turns_written:]
+                    try:
+                        with open(self.turns_stream_path, 'ab') as fh:
+                            for t in new_turns:
+                                fh.write(bytes([int(t) & 0xFF]))
+                            fh.flush()
+                            try:
+                                os.fsync(fh.fileno())
+                            except Exception:
+                                pass
+                    except Exception as e:
+                        print(f"Error appending turns to stream: {e}")
+                    self._turns_written = len(turns_list)
+
             if self.astar.isDone:
                 self.algorithm_done = True
                 self.algorithm_running = False
                 self.mode = "done"
                 if not self.astar.noSolution and self.astar.path:
-                    self.crossroads = self.get_all_crossroads(self.astar.path)
+                    # compute final correct turn list and overwrite the turns file
                     self.turn_array = self.get_all_turns(self.crossroads, self.astar.path)
+                    try:
+                        with open(self.turns_stream_path, 'wb') as fh:
+                            fh.write(bytearray(self.turn_array))
+                            fh.flush()
+                            try:
+                                os.fsync(fh.fileno())
+                            except Exception:
+                                pass
+                    except Exception as e:
+                        print(f"Error writing final turns file: {e}")
                     for i, turn in enumerate(self.turn_array):
                         print(f"Turn {i}: {turn}")
-                    self.save_turns_to_file()
 
     
     def save_turns_to_file(self, filename="turns.bin"):
@@ -489,6 +521,13 @@ class GraphVisualizer:
             self.algorithm_done = False
             self.mode = "running"
             self.text_path = []
+            # prepare/clear turns stream file for this run
+            try:
+                with open(self.turns_stream_path, 'wb'):
+                    pass
+            except Exception:
+                pass
+            self._turns_written = 0
 
     def _chat_rect(self):
         return pygame.Rect(10, SCREEN_HEIGHT - 80, 280, 30)
@@ -799,10 +838,55 @@ class GraphVisualizer:
         return crossroads
 
     def get_all_turns(self, crossroads, path):
+        """Return list of turn types for given crossroads and path (no I/O)."""
         turn_array = []
         for wp in crossroads:
             turn_type = self.print_directions(wp, path)
-            turn_array.append(turn_type)
+            if turn_type is not None:
+                turn_array.append(turn_type)
+        return turn_array
+
+    def get_all_turns_streamed(self, crossroads, path, filename=None):
+        """Compute turn types for crossroads and stream each turn byte to `filename` as soon as it's computed.
+        Returns the full list of computed turns.
+        """
+        turn_array = []
+        if filename is None:
+            # just compute without writing
+            for wp in crossroads:
+                turn_type = self.print_directions(wp, path)
+                if turn_type is not None:
+                    turn_array.append(turn_type)
+            return turn_array
+
+        try:
+            # open file for writing (truncate) so we write a fresh stream
+            with open(filename, 'wb') as fh:
+                for wp in crossroads:
+                    turn_type = self.print_directions(wp, path)
+                    if turn_type is None:
+                        continue
+                    # append to in-memory list
+                    turn_array.append(turn_type)
+                    # write one byte and flush to disk for real-time visibility
+                    try:
+                        fh.write(bytes([int(turn_type) & 0xFF]))
+                        fh.flush()
+                        try:
+                            os.fsync(fh.fileno())
+                        except Exception:
+                            pass
+                    except Exception:
+                        # non-fatal: continue computing remaining turns
+                        pass
+        except Exception as e:
+            # surface error in chat message area if available
+            try:
+                self.chat_message = f"Error writing turns stream: {e}"
+                self.chat_message_timer = pygame.time.get_ticks()
+            except Exception:
+                print(f"Error writing turns stream: {e}")
+
         return turn_array
 
     def print_directions(self, waypoint, path):

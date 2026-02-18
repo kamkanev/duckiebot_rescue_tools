@@ -29,16 +29,21 @@ TURN = 0.7
 """
 turn_array = []
 
-def load_turns_from_file(filepath):
+def load_turns_from_file(filepath, chunk_size=4096):
     """
-    Read turn sequence from a binary file.
+    Stream-read turn sequence from a binary file in chunks.
     Each byte represents one turn (0=right, 1=forward, 2=left, 3=u-turn).
     Returns a list of turn values.
     """
     try:
+        turns = []
         with open(filepath, 'rb') as f:
-            data = f.read()
-        turns = list(data)
+            while True:
+                chunk = f.read(chunk_size)
+                if not chunk:
+                    break
+                # extend list with integer byte values from chunk
+                turns.extend(chunk)
         print(f"Loaded {len(turns)} turns from {filepath}")
         return turns
     except FileNotFoundError:
@@ -112,6 +117,14 @@ def observingBox(x_pos, y_pos, mask):
                 return True
     return False
 
+def compareArrays(arr1, arr2):
+    if len(arr1) != len(arr2):
+        return False
+    for a, b in zip(arr1, arr2):
+        if a != b:
+            return False
+    return True
+
 
 async def main():
     global is_stopped
@@ -125,6 +138,8 @@ async def main():
         lower_red = np.array([0, 100, 100])
         upper_red = np.array([10, 255, 255])
         turn_array = load_turns_from_file(TURNS_FILE)
+        old_turns = turn_array.copy()
+        
         print("Turn array:", turn_array)
         while True:
             raw = await ws.recv()
@@ -153,7 +168,14 @@ async def main():
                                 await switch_lane_follow(ws, lane_following)
                                 last_stop = time.time()
                         else:
-                            print("Moving forward")
+                            turn_array = load_turns_from_file(TURNS_FILE)
+                            if compareArrays(turn_array, old_turns):
+                                turn_array = []
+                            else:
+                                old_turns = turn_array.copy()
+                                print("Updated turn array:", turn_array)
+
+                            # print("Moving forward")
                     else:
                         print("Stopped at crossroad")
                         if time.time() - last_send > 0.05:
