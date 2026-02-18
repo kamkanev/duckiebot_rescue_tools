@@ -466,15 +466,18 @@ def checkForTurningPoints(x,y,x_search,y_search,direction,bound,width2):
         y_end   = min(y + bound, cropped.shape[0])
     else:
         return False
-    
-    #cv2.rectangle(result,(x_start,y_start),(x_end,y_end),(0,0,255),1)
+    # if(x == 656 and y == 337):
+    #     cv2.rectangle(result,(x_start,y_start),(x_end,y_end),(0,0,255),1)
 
     if (x_start < x_search < x_end) and (y_start < y_search < y_end):
         # skip if red is present between current point and candidate
         red_mask = cv2.inRange(hsv, red_lower, red_upper)
-        line_mask = np.zeros_like(red_mask)
+        white_mask = cv2.inRange(hsv,lower_White, upper_White)
+        combined = cv2.bitwise_or(red_mask,white_mask)
+        line_mask = np.zeros_like(combined)
+
         cv2.line(line_mask, (int(x), int(y)), (int(x_search), int(y_search)), 255, thickness=2)
-        if np.any(cv2.bitwise_and(line_mask, red_mask)):
+        if np.any(cv2.bitwise_and(line_mask, combined)):
             return False
         return True
     
@@ -2103,30 +2106,30 @@ for i, edge in enumerate(edges):
                 weights[m[1]].append(edge['weight'])
                 neighbors[m[1]].append(edge['to'])
 
-print("---------- spots -------------")
-for s in spots:
-    print(s)
+# print("---------- spots -------------")
+# for s in spots:
+#     print(s)
 
-print("---------- neighbour -------------")
-for n in neighbors:
-    for i, x in enumerate(n):
-        for m in mapping:
-            if m[0] == x:
-                n[i] = m[1]
-    print(n)
+# print("---------- neighbour -------------")
+# for n in neighbors:
+#     for i, x in enumerate(n):
+#         for m in mapping:
+#             if m[0] == x:
+#                 n[i] = m[1]
+#     print(n)
 
-print("---------- weight -------------")
-for w in weights:
-    for i, x in enumerate(w):
-        for m in mapping:
-            if m[0] == x:
-                w[i] = m[1]
-    print(w)
+# print("---------- weight -------------")
+# for w in weights:
+#     for i, x in enumerate(w):
+#         for m in mapping:
+#             if m[0] == x:
+#                 w[i] = m[1]
+#     print(w)
 
-print("---------- mapping -------------")
-for m in mapping:
-    print(f"Spot: {m[0]}")
-    print(f"Index: {m[1]}")
+# print("---------- mapping -------------")
+# for m in mapping:
+#     print(f"Spot: {m[0]}")
+#     print(f"Index: {m[1]}")
 
 
 visited.clear()
