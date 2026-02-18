@@ -109,6 +109,8 @@ class App:
 				data = json.load(f)
 			spots_data = data.get('spots', [])
 			neigh_data = data.get('neighbors', [])
+			costs_data = data.get('weights', [])
+
 			new_spots = []
 			for sd in spots_data:
 				x = sd.get('x', 0)
@@ -122,10 +124,25 @@ class App:
 			for i, neigh_list in enumerate(neigh_data):
 				if i >= len(self.graph.spots):
 					break
+				# clear existing neighbors and costs
 				self.graph.spots[i].neighbors = []
-				for j in neigh_list:
+				self.graph.spots[i].costs = []
+
+				# corresponding weights for this spot (if present)
+				weights_for_spot = []
+				if isinstance(costs_data, list) and i < len(costs_data):
+					weights_for_spot = costs_data[i] if isinstance(costs_data[i], list) else []
+
+				for k, j in enumerate(neigh_list):
 					if 0 <= j < len(self.graph.spots):
-						self.graph.spots[i].neighbors.append(self.graph.spots[j])
+						w = 1
+						if k < len(weights_for_spot):
+							try:
+								w = float(weights_for_spot[k])
+							except Exception:
+								w = 1
+						# use addNeighborWithCost to keep neighbors and costs in sync
+						self.graph.spots[i].addNeighborWithCost(self.graph.spots[j], w)
 
 			# load image if exists in graph_drawer/assets
 			img_candidates = [
@@ -718,16 +735,16 @@ class App:
 									self.show_graph = False
 					# print turn array to console
 					path = getattr(self.astar, 'path', None)
-					if path:
-						turns = self.get_all_turns(path)
-						print(f"\n=== Path Generated ===")
-						print(f"Path length: {len(path)}")
-						print(f"Turn array: {turns}")
-						turn_names = {0: 'Right', 1: 'Straight', 2: 'Left', 3: 'U-turn'}
-						print("Turns (readable):")
-						for i, turn_type in enumerate(turns):
-							print(f"  Turn {i}: {turn_names.get(turn_type, '?')}")
-						print("=======================\n")
+					# if path:
+					# 	turns = self.get_all_turns(path)
+					# 	print(f"\n=== Path Generated ===")
+					# 	print(f"Path length: {len(path)}")
+					# 	print(f"Turn array: {turns}")
+					# 	turn_names = {0: 'Right', 1: 'Straight', 2: 'Left', 3: 'U-turn'}
+					# 	print("Turns (readable):")
+					# 	for i, turn_type in enumerate(turns):
+					# 		print(f"  Turn {i}: {turn_names.get(turn_type, '?')}")
+					# 	print("=======================\n")
 			screen.fill(WHITE)
 			self.draw_sidebar()
 			self.draw_canvas()
