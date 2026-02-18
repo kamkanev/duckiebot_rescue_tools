@@ -15,7 +15,7 @@ class Spot:
 
         self.previous = None
         self.neighbors = []
-        #self.costs = []
+        self.costs = []
 
     def clear(self):
         self.f = 0
@@ -25,6 +25,11 @@ class Spot:
 
     def addNeighbor(self, spot):
         self.neighbors.append(spot)
+        self.costs.append(1)
+    
+    def addNeighborWithCost(self, spot, cost):
+        self.neighbors.append(spot)
+        self.costs.append(cost)
 
     def show(self, map, color, showG = False):
         if not self.isWall:
@@ -217,10 +222,16 @@ class AStar:
 
                 neighbors = curr.neighbors
 
-                for neighbor in  neighbors:
+                for idx, neighbor in enumerate(neighbors):
 
                     if neighbor not in self.closeSet and not neighbor.isWall:
-                        tempG = curr.g +1 #cost
+                        # Safely get the cost corresponding to this neighbor.
+                        # Fall back to 1 if the costs list is out of sync with neighbors.
+                        if idx < len(curr.costs):
+                            edge_cost = curr.costs[idx]
+                        else:
+                            edge_cost = 1
+                        tempG = curr.g + edge_cost
 
                         newPath = False
 

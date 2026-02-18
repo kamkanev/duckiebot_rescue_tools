@@ -90,6 +90,7 @@ class GraphVisualizer:
             
             spots_data = data.get('spots', [])
             neigh_data = data.get('neighbors', [])
+            cost_data = data.get('weights', [])
             
             new_spots = []
             for sd in spots_data:
@@ -101,14 +102,30 @@ class GraphVisualizer:
             
             self.graph = AStarGraph(new_spots)
             
-            # Restore neighbors
+            # Restore neighbors and weights
             for i, neigh_list in enumerate(neigh_data):
                 if i >= len(self.graph.spots):
                     break
+                # clear existing neighbor and cost lists
                 self.graph.spots[i].neighbors = []
-                for j in neigh_list:
+                self.graph.spots[i].costs = []
+
+                # Get corresponding weights list for this spot (if any)
+                weights_for_spot = []
+                if isinstance(cost_data, list) and i < len(cost_data):
+                    weights_for_spot = cost_data[i] if isinstance(cost_data[i], list) else []
+
+                for k, j in enumerate(neigh_list):
                     if 0 <= j < len(self.graph.spots):
-                        self.graph.spots[i].neighbors.append(self.graph.spots[j])
+                        # use corresponding weight if present, otherwise default to 1
+                        w = 1
+                        if k < len(weights_for_spot):
+                            try:
+                                w = float(weights_for_spot[k])
+                            except Exception:
+                                w = 1
+                        # use Spot.addNeighborWithCost to keep neighbors and costs in sync
+                        self.graph.spots[i].addNeighborWithCost(self.graph.spots[j], w)
             
             # Calculate offset to center graph in canvas
             self._calculate_graph_offset()
