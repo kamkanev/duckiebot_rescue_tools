@@ -10,6 +10,7 @@ if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
 
 from utils.graph.AStar import Spot, AStarGraph, AStar
+from llm.route_instructions import parse_text_to_steps, write_turns_bin
 
 # Initialize pygame
 pygame.init()
@@ -33,6 +34,8 @@ GREEN = (0, 255, 0)
 PURPLE = (66, 96, 228)
 YELLOW = (255, 255, 0)
 ORANGE = (255, 165, 0)
+CHAT_BG = (240, 240, 240)
+CHAT_BORDER = (180, 180, 180)
 
 class GraphVisualizer:
     def __init__(self, initial_graph=None):
@@ -61,10 +64,22 @@ class GraphVisualizer:
 
         self.crossroads = []
         self.turn_array = []
+        self.text_path = []
+        self.chat_active = False
+        self.chat_text = ""
+        self.chat_caret = 0
+        self.chat_view_start = 0
+        self.chat_message = ""
+        self.chat_message_timer = 0
+        self.caret_blink_ms = 500
+        self.caret_visible = True
+        self.last_caret_toggle = pygame.time.get_ticks()
 
         if initial_graph and initial_graph in self.available_graphs:
             self.selected_graph_idx = self.available_graphs.index(initial_graph)
             self.load_graph(initial_graph)
+
+        pygame.key.set_repeat(300, 30)
         
     def _get_available_graphs(self):
         """Get list of available saved graphs"""
@@ -215,7 +230,7 @@ class GraphVisualizer:
             y_offset += 25
         
         # Status area
-        status_y = SCREEN_HEIGHT - 150
+        status_y = SCREEN_HEIGHT - 220
         pygame.draw.line(self.screen, GRAY, (10, status_y), (290, status_y), 1)
         
         status_y += 10
@@ -237,6 +252,30 @@ class GraphVisualizer:
         else:
             text = self.font.render("No graph loaded", True, RED)
             self.screen.blit(text, (15, status_y))
+
+        # Chat input area
+        chat_box = self._chat_rect()
+        pygame.draw.rect(self.screen, CHAT_BG, chat_box)
+        pygame.draw.rect(self.screen, CHAT_BORDER, chat_box, 2 if self.chat_active else 1)
+        prompt = "Chat: " + self.chat_text
+        if not self.chat_text and not self.chat_active:
+            prompt = "Chat: type route (requires 'start')"
+        # Render tail of text so it "moves along" as it exceeds the bar width
+        rendered, start_idx = self._fit_text_to_width(prompt, chat_box.width - 12)
+        chat_text = self.font.render(rendered, True, BLACK)
+        self.screen.blit(chat_text, (chat_box.x + 6, chat_box.y + 6))
+
+        if self.chat_active and self.caret_visible:
+            caret_x = chat_box.x + 6 + self._text_width(rendered[:self._prompt_caret_index(prompt) - start_idx])
+            caret_y = chat_box.y + 6
+            caret_h = self.font.get_height()
+            pygame.draw.line(self.screen, BLACK, (caret_x, caret_y), (caret_x, caret_y + caret_h), 1)
+
+        if self.chat_message:
+            lines = self._wrap_text(self.chat_message, chat_box.width - 12)
+            for i, line in enumerate(lines[:2]):
+                msg = self.font.render(line, True, YELLOW)
+                self.screen.blit(msg, (chat_box.x + 6, chat_box.y - 18 - (len(lines[:2]) - 1 - i) * 16))
     
     def draw_canvas(self):
         """Draw the main canvas with graph visualization"""
@@ -278,6 +317,8 @@ class GraphVisualizer:
                             screen_x = self.astar.path[p].position.x + self.graph_offset_x
                             screen_y = self.astar.path[p].position.y + self.graph_offset_y
                             pygame.draw.circle(self.screen, ORANGE, (screen_x, screen_y), self.astar.path[p].size + 5, 2)
+        elif self.text_path:
+            self._draw_text_path_with_offset()
         
         # Draw instructions
         instructions_y = 20
@@ -293,6 +334,9 @@ class GraphVisualizer:
         elif self.mode == "done":
             instr = "Pathfinding complete! Press R to reset"
             color = BLUE
+        elif self.mode == "chat_route":
+            instr = "Chat route active. Press R to reset"
+            color = ORANGE
         else:
             instr = ""
             color = WHITE
@@ -337,6 +381,33 @@ class GraphVisualizer:
                 self.is_running = False
             
             elif event.type == pygame.KEYDOWN:
+                if self.chat_active:
+                    if event.key == pygame.K_RETURN:
+                        self._submit_chat()
+                    elif event.key == pygame.K_BACKSPACE:
+                        if self.chat_caret > 0:
+                            self.chat_text = self.chat_text[:self.chat_caret - 1] + self.chat_text[self.chat_caret:]
+                            self.chat_caret -= 1
+                            self._ensure_caret_visible()
+                    elif event.key == pygame.K_LEFT:
+                        if self.chat_caret > 0:
+                            self.chat_caret -= 1
+                            self._ensure_caret_visible()
+                    elif event.key == pygame.K_RIGHT:
+                        if self.chat_caret < len(self.chat_text):
+                            self.chat_caret += 1
+                            self._ensure_caret_visible()
+                    else:
+                        if event.unicode and len(self.chat_text) < 120:
+                            self.chat_text = (
+                                self.chat_text[:self.chat_caret]
+                                + event.unicode
+                                + self.chat_text[self.chat_caret:]
+                            )
+                            self.chat_caret += 1
+                            self._ensure_caret_visible()
+                    continue
+
                 if event.key == pygame.K_ESCAPE:
                     self.is_running = False
                 
@@ -368,6 +439,13 @@ class GraphVisualizer:
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:  # Left click
                     x, y = event.pos
+                    if self._chat_rect().collidepoint(x, y):
+                        self.chat_active = True
+                        self._set_caret_from_click(x)
+                        self._ensure_caret_visible()
+                        return
+                    else:
+                        self.chat_active = False
                     # Only register clicks on canvas area
                     if x > 300:
                         if self.graph:
@@ -376,6 +454,9 @@ class GraphVisualizer:
                                 if self.mode == "select_start":
                                     self.start_spot = spot
                                     self.mode = "select_end"
+                                elif self.mode == "chat_route":
+                                    self.chat_message = "Chat route active. Press R to reset."
+                                    self.chat_message_timer = pygame.time.get_ticks()
                                 elif self.mode == "select_end":
                                     self.end_spot = spot
                                     self.mode = "ready_to_run"
@@ -390,6 +471,253 @@ class GraphVisualizer:
             self.algorithm_running = True
             self.algorithm_done = False
             self.mode = "running"
+            self.text_path = []
+
+    def _chat_rect(self):
+        return pygame.Rect(10, SCREEN_HEIGHT - 80, 280, 30)
+
+    def _text_width(self, text):
+        return self.font.size(text)[0]
+
+    def _wrap_text(self, text, max_width):
+        words = text.split()
+        if not words:
+            return [""]
+        lines = []
+        current = words[0]
+        for word in words[1:]:
+            candidate = current + " " + word
+            if self._text_width(candidate) <= max_width:
+                current = candidate
+            else:
+                lines.append(current)
+                current = word
+        lines.append(current)
+        return lines
+
+    def _prompt_caret_index(self, prompt):
+        if prompt.startswith("Chat: "):
+            return len("Chat: ") + self.chat_caret
+        return len(prompt)
+
+    def _fit_text_to_width(self, text, max_width):
+        if self._text_width(text) <= max_width:
+            self.chat_view_start = 0
+            return text, 0
+        start = min(self.chat_view_start, len(text))
+        end = len(text)
+        while self._text_width(text[start:end]) > max_width and end > start:
+            end -= 1
+        self.chat_view_start = start
+        return text[start:end], start
+
+    def _ensure_caret_visible(self):
+        prompt = "Chat: " + self.chat_text
+        caret_index = self._prompt_caret_index(prompt)
+        max_width = self._chat_rect().width - 12
+        if self._text_width(prompt) <= max_width:
+            self.chat_view_start = 0
+            return
+        if caret_index < self.chat_view_start:
+            self.chat_view_start = caret_index
+        while self._text_width(prompt[self.chat_view_start:caret_index]) > max_width and self.chat_view_start < caret_index:
+            self.chat_view_start += 1
+        while self.chat_view_start > 0 and self._text_width(prompt[self.chat_view_start - 1:]) <= max_width:
+            self.chat_view_start -= 1
+
+    def _set_caret_from_click(self, x):
+        chat_box = self._chat_rect()
+        prompt = "Chat: " + self.chat_text
+        rendered, start_idx = self._fit_text_to_width(prompt, chat_box.width - 12)
+        rel_x = max(0, x - (chat_box.x + 6))
+        # Find closest index in rendered string based on width
+        caret_in_render = 0
+        for i in range(len(rendered) + 1):
+            if self._text_width(rendered[:i]) >= rel_x:
+                caret_in_render = i
+                break
+        else:
+            caret_in_render = len(rendered)
+        caret_abs = start_idx + caret_in_render
+        if prompt.startswith("Chat: "):
+            self.chat_caret = max(0, min(len(self.chat_text), caret_abs - len("Chat: ")))
+        else:
+            self.chat_caret = len(self.chat_text)
+
+    def _load_turns_from_file(self, filepath):
+        try:
+            with open(filepath, "rb") as f:
+                return list(f.read())
+        except Exception as e:
+            self.chat_message = f"Error reading turns.bin: {e}"
+            self.chat_message_timer = pygame.time.get_ticks()
+            return []
+
+    def _angle_between(self, ax, ay, bx, by):
+        ang = math.degrees(math.atan2(ay, ax) - math.atan2(by, bx))
+        return (ang + 180) % 360 - 180
+
+    def _neighbors_sorted(self, spot):
+        return sorted(spot.neighbors, key=lambda s: (s.position.x, s.position.y))
+
+    def _turn_code_like_astar(self, prev_spot, curr_spot, next_spot):
+        # Mirror print_directions() logic for turn coding
+        fx = next_spot.position.x - curr_spot.position.x
+        fy = next_spot.position.y - curr_spot.position.y
+        nx = prev_spot.position.x - curr_spot.position.x
+        ny = prev_spot.position.y - curr_spot.position.y
+        ang = self._angle_between(ny, nx, fy, fx)
+        if abs(ang) < 30:
+            return 1
+        if ang > 0:
+            return 3 if self.is_Uturn_node(prev_spot, next_spot) else 2
+        return 0 if self.is_Uturn_node(prev_spot, next_spot) else 1
+
+    def is_Uturn_node(self, prev_spot, next_spot):
+        # Match is_Uturn distance rule without requiring astar.path indices
+        return self.astar._distance(prev_spot, next_spot) < 30 if self.astar else (
+            ((next_spot.position.x - prev_spot.position.x) ** 2 +
+             (next_spot.position.y - prev_spot.position.y) ** 2) ** 0.5 < 30
+        )
+
+    def _pick_by_turn(self, prev_spot, curr_spot, candidates, turn_code):
+        if prev_spot is None:
+            return candidates[0] if candidates else None
+
+        matching = [n for n in candidates if self._turn_code_like_astar(prev_spot, curr_spot, n) == turn_code]
+        if matching:
+            return matching[0]
+
+        # Fallback: pick by angle heuristic
+        fx = curr_spot.position.x - prev_spot.position.x
+        fy = curr_spot.position.y - prev_spot.position.y
+        best = None
+        best_score = None
+        for n in candidates:
+            nx = n.position.x - curr_spot.position.x
+            ny = n.position.y - curr_spot.position.y
+            ang = self._angle_between(ny, nx, fy, fx)
+            if turn_code == 1:
+                score = abs(ang)
+            elif turn_code == 2:
+                score = -ang if ang > 0 else float("inf")
+            elif turn_code == 0:
+                score = ang if ang < 0 else float("inf")
+            else:
+                score = abs(abs(ang) - 180)
+            if best is None or score < best_score:
+                best = n
+                best_score = score
+        return best
+
+    def _build_path_from_turns(self, turns_start_to_end):
+        if not self.start_spot or not self.graph:
+            return []
+
+        def walk_from(first_neighbor):
+            path = [self.start_spot, first_neighbor]
+            prev = self.start_spot
+            curr = first_neighbor
+            turns = list(turns_start_to_end)
+            steps = 0
+            max_steps = len(self.graph.spots) * 4
+
+            while steps < max_steps:
+                steps += 1
+                neighbors = [n for n in self._neighbors_sorted(curr) if not n.isWall]
+                if len(neighbors) == 0:
+                    break
+
+                # Straight segments
+                if len(neighbors) == 2 and prev in neighbors:
+                    nxt = neighbors[0] if neighbors[1] is prev else neighbors[1]
+                    path.append(nxt)
+                    prev, curr = curr, nxt
+                    continue
+
+                if len(neighbors) > 2 and turns:
+                    turn = turns.pop(0)
+                    candidates = neighbors if turn == 3 else ([n for n in neighbors if n is not prev] or neighbors)
+                    nxt = self._pick_by_turn(prev, curr, candidates, turn)
+                else:
+                    # No turns left: keep going straight if possible
+                    if prev is None:
+                        nxt = neighbors[0]
+                    else:
+                        candidates = [n for n in neighbors if n is not prev]
+                        if not candidates:
+                            break
+                        nxt = self._pick_by_turn(prev, curr, candidates, 1)
+
+                if nxt is None:
+                    break
+                path.append(nxt)
+                prev, curr = curr, nxt
+
+                if not turns and len(curr.neighbors) <= 1:
+                    break
+
+            return path, turns
+
+        neighbors = [n for n in self._neighbors_sorted(self.start_spot) if not n.isWall]
+        if not neighbors:
+            return [self.start_spot]
+
+        # If no turns, pick first neighbor and go straight as far as possible
+        path = None
+        if not turns_start_to_end:
+            path, _ = walk_from(neighbors[0])
+        else:
+            best = None
+            for n in neighbors:
+                candidate_path, remaining = walk_from(n)
+                consumed = len(turns_start_to_end) - len(remaining)
+                score = (consumed, len(candidate_path))
+                if best is None or score > best[0]:
+                    best = (score, candidate_path)
+            path = best[1] if best else [self.start_spot, neighbors[0]]
+
+        # Reverse to match A* path order (end -> start)
+        return list(reversed(path))
+
+    def _build_text_path_from_turns(self, filepath):
+        turns_reversed = self._load_turns_from_file(filepath)
+        turns_start_to_end = list(reversed(turns_reversed))
+        return self._build_path_from_turns(turns_start_to_end)
+
+    def _submit_chat(self):
+        text = self.chat_text.strip()
+        if not text:
+            return
+        if not self.start_spot:
+            self.chat_message = "Select a START point first."
+            self.chat_message_timer = pygame.time.get_ticks()
+            return
+
+        steps, clarification = parse_text_to_steps(text)
+        if clarification:
+            self.chat_message = clarification
+            self.chat_message_timer = pygame.time.get_ticks()
+            return
+
+        try:
+            write_turns_bin(steps, os.path.join(repo_root, "turns.bin"))
+            self.chat_message = f"Wrote turns.bin: {steps}"
+            self.chat_message_timer = pygame.time.get_ticks()
+            # Text route is separate from A* run; clear any existing end/astar
+            self.astar = None
+            self.end_spot = None
+            self.algorithm_running = False
+            self.algorithm_done = False
+            self.mode = "chat_route"
+            self.text_path = self._build_text_path_from_turns(os.path.join(repo_root, "turns.bin"))
+            self.chat_text = ""
+            self.chat_caret = 0
+            self.chat_view_start = 0
+        except Exception as e:
+            self.chat_message = f"Write failed: {e}"
+            self.chat_message_timer = pygame.time.get_ticks()
+            self.text_path = []
     
     def is_crossroad(self, waypoint, path):
         return len(path[waypoint].neighbors) > 2
@@ -434,6 +762,17 @@ class GraphVisualizer:
                 screen_x2 = self.astar.path[i + 1].position.x + self.graph_offset_x
                 screen_y2 = self.astar.path[i + 1].position.y + self.graph_offset_y
                 pygame.draw.line(self.screen, YELLOW, (screen_x1, screen_y1), (screen_x2, screen_y2), 2)
+
+    def _draw_text_path_with_offset(self):
+        """Draw text-driven path visualization with offset applied"""
+        if not self.text_path:
+            return
+        for i in range(len(self.text_path) - 1):
+            screen_x1 = self.text_path[i].position.x + self.graph_offset_x
+            screen_y1 = self.text_path[i].position.y + self.graph_offset_y
+            screen_x2 = self.text_path[i + 1].position.x + self.graph_offset_x
+            screen_y2 = self.text_path[i + 1].position.y + self.graph_offset_y
+            pygame.draw.line(self.screen, ORANGE, (screen_x1, screen_y1), (screen_x2, screen_y2), 2)
     
     def get_all_crossroads(self, path):
         crossroads = []
@@ -528,6 +867,7 @@ class GraphVisualizer:
         self.end_spot = None
         self.algorithm_running = False
         self.algorithm_done = False
+        self.text_path = []
         self.mode = "select_start"
     
     def run(self):
@@ -544,6 +884,18 @@ class GraphVisualizer:
             self.draw_sidebar()
             self.draw_canvas()
             self.draw_controls()
+
+            # Clear transient chat message after 4 seconds
+            if self.chat_message_timer:
+                if pygame.time.get_ticks() - self.chat_message_timer > 4000:
+                    self.chat_message = ""
+                    self.chat_message_timer = 0
+
+            if self.chat_active:
+                now = pygame.time.get_ticks()
+                if now - self.last_caret_toggle > self.caret_blink_ms:
+                    self.caret_visible = not self.caret_visible
+                    self.last_caret_toggle = now
             
             pygame.display.flip()
             self.clock.tick(FPS)
