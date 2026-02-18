@@ -214,5 +214,10 @@ async def main():
                         await send_cmd(ws, MANUAL_CMD_TOPIC, 0, 0)
                         break
 
-asyncio.run(main())
-cv2.destroyAllWindows()
+if __name__ == '__main__':
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
+    finally:
+        cv2.destroyAllWindows()
