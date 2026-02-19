@@ -2114,30 +2114,22 @@ for i, edge in enumerate(edges):
                 weights[m[1]].append(edge['weight'])
                 neighbors[m[1]].append(edge['to'])
 
-# print("---------- spots -------------")
-# for s in spots:
-#     print(s)
 
-# print("---------- neighbour -------------")
-# for n in neighbors:
-#     for i, x in enumerate(n):
-#         for m in mapping:
-#             if m[0] == x:
-#                 n[i] = m[1]
-#     print(n)
+print("---------- neighbour -------------")
+for n in neighbors:
+    for i, x in enumerate(n):
+        for m in mapping:
+            if m[0] == x:
+                n[i] = m[1]
+    print(n)
 
-# print("---------- weight -------------")
-# for w in weights:
-#     for i, x in enumerate(w):
-#         for m in mapping:
-#             if m[0] == x:
-#                 w[i] = m[1]
-#     print(w)
-
-# print("---------- mapping -------------")
-# for m in mapping:
-#     print(f"Spot: {m[0]}")
-#     print(f"Index: {m[1]}")
+print("---------- weight -------------")
+for w in weights:
+    for i, x in enumerate(w):
+        for m in mapping:
+            if m[0] == x:
+                w[i] = m[1]
+    print(w)
 
 
 visited.clear()
@@ -2162,9 +2154,10 @@ data = {
 }
 
 repo_root = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
-graph_dir = os.path.join(repo_root, "mapeditor", "saves", "graph")
+map_name = os.path.splitext(os.path.basename(image_path))[0]
+graph_dir = os.path.join(repo_root, "mapeditor", "saves", map_name)
 os.makedirs(graph_dir, exist_ok=True)
-graph_path = os.path.join(graph_dir, "graph.json")
+graph_path = os.path.join(graph_dir, f"{map_name}.json")
 
 with open(graph_path, "w") as f:
     json.dump(data, f, indent=4)

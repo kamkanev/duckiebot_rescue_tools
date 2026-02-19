@@ -8,6 +8,7 @@ import json
 import math
 import pygame
 import numpy as np
+import subprocess
 
 # Ensure repo root on path so utils.graph imports work
 repo_root = os.path.normpath(os.path.join(os.path.dirname(__file__), ''))
@@ -762,6 +763,19 @@ class App:
 
 		# quick help (moved to top-right of canvas, so no controls here)
 
+		# button to open map editor
+		btn_w = SIDEBAR_W - 24
+		btn_h = 28
+		btn_x = 12
+		btn_y = SCREEN_HEIGHT - 236
+		self.editor_button_rect = pygame.Rect(btn_x, btn_y, btn_w, btn_h)
+		pygame.draw.rect(screen, GRAY, self.editor_button_rect)
+		label = 'Open Map Editor'
+		txt = font.render(label, True, BLACK)
+		tx = btn_x + 8
+		ty = btn_y + (btn_h - txt.get_height()) // 2
+		screen.blit(txt, (tx, ty))
+
 		# toggle button for showing/hiding the graph
 		btn_w = SIDEBAR_W - 24
 		btn_h = 28
@@ -1081,9 +1095,17 @@ class App:
 				elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
 					mx, my = ev.pos
 					# check sidebar toggle button first
-					if mx <= SIDEBAR_W and getattr(self, 'toggle_button_rect', None) and self.toggle_button_rect.collidepoint(mx, my):
-						self.show_graph = not self.show_graph
-						continue
+					if mx <= SIDEBAR_W:
+						if getattr(self, 'editor_button_rect', None) and self.editor_button_rect.collidepoint(mx, my):
+							editor_py = os.path.join(repo_root, 'mapeditor', 'map_editor.py')
+							try:
+								subprocess.Popen([sys.executable, editor_py], cwd=repo_root)
+							except Exception as e:
+								print('Failed to open map editor:', e)
+							continue
+						if getattr(self, 'toggle_button_rect', None) and self.toggle_button_rect.collidepoint(mx, my):
+							self.show_graph = not self.show_graph
+							continue
 					if self._chat_rect().collidepoint(mx, my):
 						self.chat_active = True
 						self._set_caret_from_click(mx)

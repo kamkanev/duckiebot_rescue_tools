@@ -18,8 +18,8 @@ def main():
     cmd = [sys.executable, main_py, image_path]
     subprocess.run(cmd, check=False, cwd=graph_dir)
 
-    astar_py = os.path.join(repo_root, "utils", "graph", "AStarTest.py")
-    subprocess.run([sys.executable, astar_py, "graph"], check=False, cwd=repo_root)
+    app_main = os.path.join(repo_root, "main.py")
+    subprocess.run([sys.executable, app_main], check=False, cwd=repo_root)
 
 
 if __name__ == "__main__":
