@@ -616,6 +616,13 @@ class GraphVisualizer:
     def _neighbors_sorted(self, spot):
         return sorted(spot.neighbors, key=lambda s: (s.position.x, s.position.y))
 
+    def _spot_distance(self, a, b):
+        if self.astar:
+            return self.astar._distance(a, b)
+        dx = b.position.x - a.position.x
+        dy = b.position.y - a.position.y
+        return (dx * dx + dy * dy) ** 0.5
+
     def _turn_code(self, prev_spot, curr_spot, next_spot):
         # Shared turn coding logic for path reconstruction and debug output
         fx = next_spot.position.x - curr_spot.position.x
@@ -627,15 +634,18 @@ class GraphVisualizer:
             return 1
         if ang > 0:
             return 3 if self._is_uturn_distance(prev_spot, next_spot) else 2
-        return 0 if self._is_uturn_distance(prev_spot, next_spot) else 1
+        if self._is_uturn_distance(prev_spot, next_spot):
+            return 3
+        if self._right_turn_looks_straight(prev_spot, next_spot):
+            return 1
+        return 0
 
     def _is_uturn_distance(self, prev_spot, next_spot, threshold=30):
         # Shared distance rule for U-turn detection
-        if self.astar:
-            return self.astar._distance(prev_spot, next_spot) < threshold
-        dx = next_spot.position.x - prev_spot.position.x
-        dy = next_spot.position.y - prev_spot.position.y
-        return (dx * dx + dy * dy) ** 0.5 < threshold
+        return self._spot_distance(prev_spot, next_spot) < threshold
+
+    def _right_turn_looks_straight(self, prev_spot, next_spot, threshold=50):
+        return self._spot_distance(prev_spot, next_spot) > threshold
 
     def _pick_by_turn(self, prev_spot, curr_spot, candidates, turn_code):
         if prev_spot is None:

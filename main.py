@@ -98,6 +98,11 @@ class App:
 		self.chat_view_start = 0
 		self.chat_message = ""
 		self.chat_message_timer = 0
+		# turn streaming state (mirrors AStarTest)
+		self.turns_stream_path = os.path.join(repo_root, "turns.bin")
+		self._turns_written = 0
+		self.crossroads = []
+		self.turn_array = []
 		self.caret_blink_ms = 500
 		self.caret_visible = True
 		self.last_caret_toggle = pygame.time.get_ticks()
@@ -420,13 +425,56 @@ class App:
 			self.astar = AStar(self.start_spot, self.end_spot)
 			self.algorithm_running = True
 			self.algorithm_done = False
+			# prepare turns stream file for this run (truncate)
+			try:
+				with open(self.turns_stream_path, 'wb'):
+					pass
+			except Exception:
+				pass
+			self._turns_written = 0
+			self.turn_array = []
+			self.crossroads = []
 
 	def step_astar(self):
 		if self.astar and not self.algorithm_done:
 			self.astar.update()
+			# compute turns and stream any new ones as the path evolves
+			if not self.astar.noSolution and self.astar.path:
+				# update crossroads indices for debugging
+				self.crossroads = [i for i in range(len(self.astar.path)) if self.is_crossroad(i, self.astar.path)]
+				turns_list = self.get_all_turns(self.astar.path)
+				if len(turns_list) > self._turns_written:
+					new_turns = turns_list[self._turns_written:]
+					try:
+						with open(self.turns_stream_path, 'ab') as fh:
+							fh.write(bytearray([int(t) & 0xFF for t in new_turns]))
+							fh.flush()
+							try:
+								os.fsync(fh.fileno())
+							except Exception:
+								pass
+					except Exception as e:
+						print(f"Error appending turns to stream: {e}")
+					self._turns_written = len(turns_list)
+
 			if self.astar.isDone:
 				self.algorithm_done = True
 				self.algorithm_running = False
+				if not self.astar.noSolution and self.astar.path:
+					# compute final turn list and overwrite stream file
+					self.turn_array = self.get_all_turns(self.astar.path)
+					try:
+						with open(self.turns_stream_path, 'wb') as fh:
+							fh.write(bytearray([int(t) & 0xFF for t in self.turn_array]))
+							fh.flush()
+							try:
+								os.fsync(fh.fileno())
+							except Exception:
+								pass
+					except Exception as e:
+						print(f"Error writing final turns file: {e}")
+					for i, turn in enumerate(self.turn_array):
+						print(f"Turn {i}: {turn}")
 
 	def reset(self):
 		if self.graph and hasattr(self.graph, 'clearSpots'):
@@ -444,6 +492,18 @@ class App:
 		self.chat_message = ""
 		self.chat_message_timer = 0
 
+	def save_turns_to_file(self, filename="turns.bin"):
+		"""Save the turn array to a binary file"""
+		if not self.turn_array:
+			print("No turns to save.")
+			return
+		try:
+			with open(filename, 'wb') as f:
+				f.write(bytearray([int(t) & 0xFF for t in self.turn_array]))
+			print(f"Turn array saved to {filename}")
+		except Exception as e:
+			print(f"Error saving turn array: {e}")
+
 	def is_crossroad(self, waypoint, path):
 		"""Check if a waypoint is a crossroad (>2 neighbors)."""
 		if waypoint < 0 or waypoint >= len(path):
@@ -454,9 +514,7 @@ class App:
 		"""Check if waypoint is a U-turn based on distance to previous and next."""
 		if len(path) == 0 or waypoint <= 0 or waypoint >= len(path) - 1:
 			return False
-		dist = math.sqrt((path[waypoint - 1].position.x - path[waypoint + 1].position.x) ** 2 +
-		                  (path[waypoint - 1].position.y - path[waypoint + 1].position.y) ** 2)
-		return dist < 30
+		return self._is_uturn_distance(path[waypoint - 1], path[waypoint + 1])
 
 	def get_turn_type(self, waypoint, path):
 		"""Calculate turn direction at a crossroad waypoint: 0=right, 1=straight, 2=left, 3=uturn.
@@ -491,6 +549,8 @@ class App:
 		else:
 			if self.is_uturn(waypoint, path):
 				return 3
+			elif self._right_turn_looks_straight(prev, nxt):
+				return 1
 			else:
 				return 0
 
@@ -588,12 +648,18 @@ class App:
 	def _neighbors_sorted(self, spot):
 		return sorted(spot.neighbors, key=lambda s: (s.position.x, s.position.y))
 
-	def _is_uturn_distance(self, prev_spot, next_spot, threshold=30):
+	def _spot_distance(self, a, b):
 		if self.astar:
-			return self.astar._distance(prev_spot, next_spot) < threshold
-		dx = next_spot.position.x - prev_spot.position.x
-		dy = next_spot.position.y - prev_spot.position.y
-		return (dx * dx + dy * dy) ** 0.5 < threshold
+			return self.astar._distance(a, b)
+		dx = b.position.x - a.position.x
+		dy = b.position.y - a.position.y
+		return (dx * dx + dy * dy) ** 0.5
+
+	def _is_uturn_distance(self, prev_spot, next_spot, threshold=30):
+		return self._spot_distance(prev_spot, next_spot) < threshold
+
+	def _right_turn_looks_straight(self, prev_spot, next_spot, threshold=50):
+		return self._spot_distance(prev_spot, next_spot) > threshold
 
 	def _turn_code(self, prev_spot, curr_spot, next_spot):
 		fx = next_spot.position.x - curr_spot.position.x
@@ -605,7 +671,11 @@ class App:
 			return 1
 		if ang > 0:
 			return 3 if self._is_uturn_distance(prev_spot, next_spot) else 2
-		return 0 if self._is_uturn_distance(prev_spot, next_spot) else 1
+		if self._is_uturn_distance(prev_spot, next_spot):
+			return 3
+		if self._right_turn_looks_straight(prev_spot, next_spot):
+			return 1
+		return 0
 
 	def _pick_by_turn(self, prev_spot, curr_spot, candidates, turn_code):
 		if prev_spot is None:
@@ -1125,8 +1195,8 @@ class App:
 								self.start_astar()
 								# run until done
 								if self.astar:
-									while not getattr(self.astar, 'isDone', False):
-										self.astar.update()
+									while not self.algorithm_done:
+										self.step_astar()
 									# after run, ensure we only display the path
 									self.show_graph = False
 					# print turn array to console
