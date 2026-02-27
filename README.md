@@ -3,6 +3,28 @@
 This repository is a practical toolkit for Duckiebot navigation workflows.
 The main focus is self-navigation through map/graph-based routing and turn-stream output (`turns.bin`), with teleoperation, lane-follow/rescue tests, and calibration tools included for full robot operation.
 
+## Screenshots
+
+Main self-navigation UI:
+
+![Main Showcase](screenshots/main_showcase.png)
+
+Generated path and turn workflow:
+
+![Main Path](screenshots/main_path.png)
+
+Map editor:
+
+![Map Editor](screenshots/mapeditor.png)
+
+Teleoperation movement UI:
+
+![Teleop Movement](screenshots/teletop_movement.png)
+
+Camera connectivity/test view:
+
+![Camera Test](screenshots/camera_test.png)
+
 ## What This Repo Contains
 
 - Self-navigation tooling:
