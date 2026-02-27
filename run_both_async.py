@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Run `duckie_teleop_gui.py` and `testing/test_stop_lanefollow.py` concurrently as async subprocesses.
+Run `main.py`, `duckie_teleop_gui.py`, and `testing/test_stop_lanefollow.py`
+concurrently as async subprocesses.
 Usage: python3 run_both_async.py [BOT_NAME]
 
 Example: python3 run_both_async.py entebot208
@@ -31,16 +32,18 @@ async def stream_process(cmd, name):
 async def main():
     bot = sys.argv[1] if len(sys.argv) > 1 else None
     root = os.getcwd()
+    main_cmd = [PY, os.path.join(root, "main.py")]
     teleop_cmd = [PY, os.path.join(root, "duckie_teleop_gui.py")]
     test_cmd = [PY, os.path.join(root, "testing", "test_stop_lanefollow.py")]
     if bot:
         teleop_cmd.append(bot)
         test_cmd.append(bot)
 
+    t0 = asyncio.create_task(stream_process(main_cmd, "main"))
     t1 = asyncio.create_task(stream_process(teleop_cmd, "teleop"))
     t2 = asyncio.create_task(stream_process(test_cmd, "test_stop"))
 
-    done, pending = await asyncio.wait([t1, t2], return_when=asyncio.FIRST_COMPLETED)
+    done, pending = await asyncio.wait([t0, t1, t2], return_when=asyncio.FIRST_COMPLETED)
     # if one exits, cancel the other
     for p in pending:
         p.cancel()
