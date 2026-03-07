@@ -7,8 +7,6 @@ The main focus is self-navigation through map/graph-based routing and turn-strea
 
 You can access the video of the project here -- [Duckie - Self Navigation - YouTube](https://youtu.be/ypY6CGIShrA)
 
-<iframe src="https://www.youtube.com/watch?v=ypY6CGIShrA" width="100%" height="500px"></iframe>
-
 ## Screenshots
 
 Main self-navigation UI:
