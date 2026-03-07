@@ -3,6 +3,12 @@
 This repository is a practical toolkit for Duckiebot navigation workflows.
 The main focus is self-navigation through map/graph-based routing and turn-stream output (`turns.bin`), with teleoperation, lane-follow/rescue tests, and calibration tools included for full robot operation.
 
+## Video
+
+You can access the video of the project here -- [Duckie - Self Navigation - YouTube](https://youtu.be/ypY6CGIShrA)
+
+<iframe src="https://www.youtube.com/watch?v=ypY6CGIShrA" width="100%" height="500px"></iframe>
+
 ## Screenshots
 
 Main self-navigation UI:
@@ -64,6 +70,7 @@ python3 main.py
 4. Turn decisions are streamed to `turns.bin` as raw bytes.
 
 Turn encoding:
+
 - `0` = right
 - `1` = straight
 - `2` = left
@@ -84,6 +91,7 @@ python3 run_both_async.py entebot208
 ```
 
 This starts:
+
 - `main.py`
 - `duckie_teleop_gui.py`
 - `testing/test_stop_lanefollow.py`
@@ -122,6 +130,7 @@ The route writer stores turns in `turns.bin` in binary format.
   - `python3 calibrate_extrinsics.py`
 
 Calibration outputs are stored under:
+
 - `camera_intrinsic/`
 - `camera_extrinsic/`
 - `calibration/` (captured images)
