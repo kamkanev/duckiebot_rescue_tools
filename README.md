@@ -7,6 +7,10 @@ The main focus is self-navigation through map/graph-based routing and turn-strea
 
 You can access the video of the project here -- [Duckie - Self Navigation - YouTube](https://youtu.be/ypY6CGIShrA)
 
+## Final Report
+
+Download the full project report here: [Final_Report.pdf](Final_Report.pdf)
+
 ## Screenshots
 
 Main self-navigation UI:
